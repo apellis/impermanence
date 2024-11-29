@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		339130F22A9ABBD50027FD57 /* DayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 339130F12A9ABBD50027FD57 /* DayTests.swift */; };
+		339130F32A9AC32F0027FD57 /* Day.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA8992AB2A7EB07A00971377 /* Day.swift */; };
+		339130F52A9AC5850027FD57 /* Bell.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA8992AF2A7EB1BE00971377 /* Bell.swift */; };
+		339130F62A9AC5880027FD57 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA8992A92A7EAFFA00971377 /* Theme.swift */; };
 		FA89927F2A7EAF5500971377 /* ImpermanenceApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA89927E2A7EAF5500971377 /* ImpermanenceApp.swift */; };
 		FA8992832A7EAF5600971377 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = FA8992822A7EAF5600971377 /* Assets.xcassets */; };
 		FA8992862A7EAF5600971377 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = FA8992852A7EAF5600971377 /* Preview Assets.xcassets */; };
@@ -55,6 +59,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		339130F12A9ABBD50027FD57 /* DayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayTests.swift; sourceTree = "<group>"; };
+		339130F42A9AC5370027FD57 /* Impermanence.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = file; path = Impermanence.xctestplan; sourceTree = SOURCE_ROOT; };
 		FA89927B2A7EAF5500971377 /* Impermanence.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Impermanence.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FA89927E2A7EAF5500971377 /* ImpermanenceApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImpermanenceApp.swift; sourceTree = "<group>"; };
 		FA8992822A7EAF5600971377 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -168,7 +174,9 @@
 		FA89928E2A7EAF5600971377 /* ImpermanenceTests */ = {
 			isa = PBXGroup;
 			children = (
+				339130F42A9AC5370027FD57 /* Impermanence.xctestplan */,
 				FA89928F2A7EAF5600971377 /* ImpermanenceTests.swift */,
+				339130F12A9ABBD50027FD57 /* DayTests.swift */,
 			);
 			path = ImpermanenceTests;
 			sourceTree = "<group>";
@@ -356,7 +364,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				339130F52A9AC5850027FD57 /* Bell.swift in Sources */,
+				339130F22A9ABBD50027FD57 /* DayTests.swift in Sources */,
+				339130F62A9AC5880027FD57 /* Theme.swift in Sources */,
 				FA8992902A7EAF5600971377 /* ImpermanenceTests.swift in Sources */,
+				339130F32A9AC32F0027FD57 /* Day.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

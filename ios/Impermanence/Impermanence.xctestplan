@@ -1,0 +1,24 @@
+{
+  "configurations" : [
+    {
+      "id" : "BC5271B8-0F3A-47CB-B897-C5709737A70F",
+      "name" : "Configuration 1",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:Impermanence.xcodeproj",
+        "identifier" : "FA89928A2A7EAF5600971377",
+        "name" : "ImpermanenceTests"
+      }
+    }
+  ],
+  "version" : 1
+}

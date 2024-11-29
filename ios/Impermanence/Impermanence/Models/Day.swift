@@ -15,13 +15,14 @@ struct Day: Identifiable, Codable {
     var startBell: Bell
     var manualBell: Bell
     var theme: Theme
+    private let nowDate: Date
 
     var startTimeAsDate: Date {
         get {
-            Calendar.current.startOfDay(for: Date.now).addingTimeInterval(self.startTime)
+            Calendar.current.startOfDay(for: nowDate).addingTimeInterval(self.startTime)
         }
         set {
-            self.startTime = newValue.timeIntervalSince(Calendar.current.startOfDay(for: Date.now))
+            self.startTime = newValue.timeIntervalSince(Calendar.current.startOfDay(for: nowDate))
         }
     }
 
@@ -35,7 +36,7 @@ struct Day: Identifiable, Codable {
 
     var segmentStartEndTimes: [(Date, Date)] {
         var ret: [(Date, Date)] = []
-        var timeCursor = Calendar.current.startOfDay(for: Date.now)
+        var timeCursor = Calendar.current.startOfDay(for: nowDate)
             .addingTimeInterval(startTime)
         self.segments.forEach { segment in
             ret.append((timeCursor, timeCursor.addingTimeInterval(segment.duration)))
@@ -44,7 +45,7 @@ struct Day: Identifiable, Codable {
         return ret
     }
 
-    init(id: UUID = UUID(), name: String, startTime: TimeInterval, segments: [Segment], startBell: Bell = Bell.singleBell, manualBell: Bell = Bell.singleBell, theme: Theme = Theme.bubblegum) {
+    init(id: UUID = UUID(), name: String, startTime: TimeInterval, segments: [Segment], startBell: Bell = Bell.singleBell, manualBell: Bell = Bell.singleBell, theme: Theme = Theme.bubblegum, nowDate: Date = Date.now) {
         self.id = id
         self.name = name
         self.startTime = startTime
@@ -52,13 +53,14 @@ struct Day: Identifiable, Codable {
         self.startBell = startBell
         self.manualBell = manualBell
         self.theme = theme
+        self.nowDate = nowDate
     }
 
     var currentSegmentAndTimeRemaining: (Segment, TimeInterval)? {
         var ret: (Segment, TimeInterval)? = nil
         zip(segments, segmentStartEndTimes).forEach({ (segment, times) in
-            if Date.now >= times.0 && Date.now < times.1 {
-                ret = (segment, times.1.timeIntervalSince(Date.now))
+            if nowDate >= times.0 && nowDate < times.1 {
+                ret = (segment, times.1.timeIntervalSince(nowDate))
             }
         })
         return ret
