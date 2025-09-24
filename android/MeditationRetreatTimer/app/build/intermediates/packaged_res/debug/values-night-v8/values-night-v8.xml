@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.MeditationRetreatTimer" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    
+    <item name="colorPrimary">@color/mulberry</item>
+    <item name="colorPrimaryVariant">@color/redwood</item>
+    <item name="colorOnPrimary">@color/white</item>
+    
+    <item name="colorSecondary">@color/jelly_bean</item>
+    <item name="colorSecondaryVariant">@color/blue_zodiac</item>
+    <item name="colorOnSecondary">@color/white</item>
+    
+    <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
+    
+</style>
+</resources>
