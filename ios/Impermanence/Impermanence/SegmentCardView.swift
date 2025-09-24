@@ -14,7 +14,7 @@ struct SegmentCardView: View {
     let theme: Theme
     let useTheme: Bool
     let highlighted: Bool
-    let formatter = DateFormatter()
+    @AppStorage("use24HourClock") private var use24HourClock = false
 
     init(segment: Day.Segment, startTime: Date, endTime: Date, theme: Theme, useTheme: Bool = false, highlighted: Bool = false) {
         self.segment = segment
@@ -23,23 +23,20 @@ struct SegmentCardView: View {
         self.theme = theme
         self.useTheme = useTheme
         self.highlighted = highlighted
-
-        formatter.dateFormat = "HH:mm"
     }
 
     var body: some View {
-        HStack {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
             Text(segment.name)
                 .font(.headline)
                 .accessibilityAddTraits(.isHeader)
-            Spacer()
-            Label("\(formatter.string(from: startTime)) – \(formatter.string(from: endTime))", systemImage: "clock")
-                .font(.caption)
-                .accessibilityLabel("duration \(segment.duration)")
-            Spacer()
-            Label("\(segment.endBell.numRings)", systemImage: "bell")
-                .labelStyle(.trailingIcon)
-                .font(.caption)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            timeColumn
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            bellColumn
+                .frame(maxWidth: .infinity, alignment: .trailing)
         }
         .padding()
         .if(self.useTheme) { $0.background(theme.mainColor) }
@@ -50,6 +47,33 @@ struct SegmentCardView: View {
                     .strokeBorder(theme.accentColor, lineWidth: 1)
             )
         }
+    }
+
+    private var timeRangeText: String {
+        let start = TimeFormatting.formattedTime(from: startTime, use24HourClock: use24HourClock)
+        let end = TimeFormatting.formattedTime(from: endTime, use24HourClock: use24HourClock)
+        return "\(start) – \(end)"
+    }
+
+    private var timeColumn: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "clock")
+            Text(timeRangeText)
+                .font(.caption)
+                .monospacedDigit()
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("duration \(segment.duration)")
+    }
+
+    private var bellColumn: some View {
+        HStack(spacing: 4) {
+            Text("\(segment.endBell.numRings)")
+                .font(.caption)
+            Image(systemName: "bell")
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("bell rings \(segment.endBell.numRings)")
     }
 }
 

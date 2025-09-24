@@ -10,27 +10,30 @@ import SwiftUI
 struct SettingsView: View {
     @Binding var isPresentingSettingsView: Bool
 
-    @State private var use24HourTime: Bool = false
-    @State private var loopDays: Bool = true
+    @AppStorage("use24HourClock") private var use24HourClock = false
+    @AppStorage("loopDays") private var loopDays = true
 
     var body: some View {
         NavigationStack {
-            Toggle(isOn: $use24HourTime, label: {
-                Text("Use 24 hour time")
-            })
-            Toggle(isOn: $loopDays, label: {
-                Text("Days loop at midnight")
-            })
-            .padding()
+            Form {
+                Section {
+                    Toggle(isOn: $use24HourClock) {
+                        Text("Use 24-hour clock")
+                    }
+                    Toggle(isOn: $loopDays) {
+                        Text("Loop days at midnight")
+                    }
+                }
+            }
             .navigationTitle("Settings")
             .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button(action: {
-                            isPresentingSettingsView = false
-                        }) {
-                            Image(systemName: "arrow.left")
-                        }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(action: {
+                        isPresentingSettingsView = false
+                    }) {
+                        Image(systemName: "arrow.left")
                     }
+                }
             }
         }
     }

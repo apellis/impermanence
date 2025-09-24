@@ -11,22 +11,13 @@ struct DayDetailView: View {
     @Binding var day: Day
 
     let calendar: Calendar = Calendar.current
-    let formatter = DateFormatter()
-    var startTime = Date.now
-    var endTime = Date.now
+    @AppStorage("use24HourClock") private var use24HourClock = false
 
     @State private var editingDay = Day.emptyDay
     @State private var isPresentingEditView = false
 
     init(day: Binding<Day>) {
         self._day = day
-
-        self.startTime = calendar.startOfDay(for: Date.now)
-            .addingTimeInterval(self.day.startTime)
-        self.endTime = calendar.startOfDay(for: Date.now)
-            .addingTimeInterval(self.day.startEndTimeIntervals.1)
-
-        formatter.dateFormat = "HH:mm"
     }
 
     var body: some View {
@@ -37,7 +28,9 @@ struct DayDetailView: View {
                         .font(.headline)
                         .foregroundColor(.accentColor)
                 }
-                Label("\(formatter.string(from: self.startTime))–\(formatter.string(from: self.endTime))", systemImage: "clock")
+                .listRowSeparator(.hidden)
+                Label("\(TimeFormatting.formattedTime(from: dayStartTime, use24HourClock: use24HourClock))–\(TimeFormatting.formattedTime(from: dayEndTime, use24HourClock: use24HourClock))", systemImage: "clock")
+                    .listRowSeparator(.hidden)
                 HStack {
                     Label("Theme", systemImage: "paintpalette")
                     Spacer()
@@ -48,14 +41,22 @@ struct DayDetailView: View {
                         .cornerRadius(4)
                 }
                 .accessibilityElement(children: .combine)
+                .listRowSeparator(.hidden)
             }
+            .listSectionSeparator(.hidden)
             Section(header: Text("Segments")) {
                 ForEach(day.segments.indices, id: \.self) { i in
                     SegmentCardView(segment: day.segments[i], startTime: day.segmentStartEndTimes[i].0, endTime: day.segmentStartEndTimes[i].1, theme: day.theme)
+                        .listRowSeparator(.hidden)
                 }
             }
+            .listSectionSeparator(.hidden)
         }
         .navigationTitle(day.name)
+        .listStyle(.plain)
+        .listRowSeparator(.hidden, edges: .all)
+        .listSectionSeparator(.hidden, edges: .all)
+        .scrollContentBackground(.hidden)
         .toolbar {
             Button("Edit") {
                 isPresentingEditView = true
@@ -81,6 +82,16 @@ struct DayDetailView: View {
                     }
             }
         }
+    }
+
+    private var dayStartTime: Date {
+        calendar.startOfDay(for: Date.now)
+            .addingTimeInterval(day.startTime)
+    }
+
+    private var dayEndTime: Date {
+        calendar.startOfDay(for: Date.now)
+            .addingTimeInterval(day.startEndTimeIntervals.1)
     }
 }
 

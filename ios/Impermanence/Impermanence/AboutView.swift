@@ -19,16 +19,14 @@ struct AboutView: View {
                 Text("For the benefit of all beings ☸️")
                 Divider()
                     .padding()
-                Text("Copyright 2023, Neversink LLC")
+                Text("Copyright 2025, Neversink LLC")
                 Text("Contact: apellis@gmail.com")
                 Divider()
                     .padding()
                 Text("Future features")
                 Text("""
                     * More bell sound options
-                    * Control over number of bell chimes per transition
-                    * 12- vs. 24-hour clock setting
-                    * (your feature request can go here!)
+                    * Multi-day retreat plans
                     """)
                     .padding()
                 .toolbar {

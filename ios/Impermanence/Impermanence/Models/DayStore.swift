@@ -7,8 +7,10 @@
 
 import SwiftUI
 
+@MainActor
 class DayStore: ObservableObject {
     @Published var days: [Day] = []
+    private static let defaultDays: [Day] = [Day.openingDay, Day.fullDay]
 
     private static func fileURL() throws -> URL {
         try FileManager.default.url(for: .documentDirectory,
@@ -22,7 +24,7 @@ class DayStore: ObservableObject {
         let task = Task<[Day], Error> {
             let fileURL = try Self.fileURL()
             guard let data = try? Data(contentsOf: fileURL) else {
-                return []
+                return Self.defaultDays
             }
             let days = try JSONDecoder().decode([Day].self, from: data)
             return days

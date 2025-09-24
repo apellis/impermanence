@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct Bell: Codable {
+struct Bell: Codable, Equatable {
     var soundId: Int
     var numRings: Int
 }

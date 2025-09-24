@@ -40,14 +40,12 @@ struct DaysView: View {
                         Image(systemName: "info.circle")
                     }
                     .accessibilityLabel("About")
-                    /* TODO not implemented yet
                     Button(action: {
                         isPresentingSettingsView = true
                     }) {
                         Image(systemName: "gearshape")
                     }
                     .accessibilityLabel("Settings")
-                    */
                     Button(action: {
                         isPresentingNewDayView = true
                     }) {
@@ -59,11 +57,9 @@ struct DaysView: View {
             .sheet(isPresented: $isPresentingNewDayView) {
                 NewDaySheet(days: $days, isPresentingNewDayView: $isPresentingNewDayView)
             }
-            /* TODO not implemented yet
             .sheet(isPresented: $isPresentingSettingsView) {
                 SettingsView(isPresentingSettingsView: $isPresentingSettingsView)
             }
-            */
             .sheet(isPresented: $isPresentingAboutView) {
                 AboutView(isPresentingAboutView: $isPresentingAboutView)
             }

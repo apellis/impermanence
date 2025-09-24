@@ -9,12 +9,11 @@ import SwiftUI
 
 struct DayCardView: View {
     let day: Day
-    let formatter = DateFormatter()
+
+    @AppStorage("use24HourClock") private var use24HourClock = false
 
     init(day: Day) {
         self.day = day
-
-        formatter.dateFormat = "HH:mm"
     }
 
     var body: some View {
@@ -24,8 +23,8 @@ struct DayCardView: View {
                 .accessibilityAddTraits(.isHeader)
             Spacer()
             HStack {
-                if day.segments.count > 0 {
-                    Label("\(formatter.string(from: day.segmentStartEndTimes[0].0)) – \(formatter.string(from: day.segmentStartEndTimes[day.segmentStartEndTimes.count - 1].1))", systemImage: "clock")
+                if let rangeText = timeRangeText {
+                    Label(rangeText, systemImage: "clock")
                         .accessibilityLabel("duration \(day.segments.count)")
                         .labelStyle(.trailingIcon)
                 }
@@ -35,6 +34,16 @@ struct DayCardView: View {
         }
         .padding()
         .foregroundColor(day.theme.accentColor)
+    }
+
+    private var timeRangeText: String? {
+        guard let first = day.segmentStartEndTimes.first,
+              let last = day.segmentStartEndTimes.last else {
+            return nil
+        }
+        let start = TimeFormatting.formattedTime(from: first.0, use24HourClock: use24HourClock)
+        let end = TimeFormatting.formattedTime(from: last.1, use24HourClock: use24HourClock)
+        return "\(start) – \(end)"
     }
 }
 

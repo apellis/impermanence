@@ -10,27 +10,98 @@ import XCTest
 
 final class ImpermanenceTests: XCTestCase {
 
-    override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
+    @MainActor
+    func testDayTimerRingsStartAndEndBells() {
+        let startBell = Bell(soundId: 0, numRings: 2)
+        let endBell = Bell(soundId: 0, numRings: 3)
+        let segment = Day.Segment(name: "Meditate", duration: 60, endBell: endBell)
+        let referenceDate = Date(timeIntervalSinceReferenceDate: 1_000)
+
+        let timer = DayTimer(
+            startTime: 0,
+            segments: [segment],
+            startBell: startBell,
+            loopDays: false,
+            currentDate: referenceDate
+        )
+
+        var capturedBells: [Bell] = []
+        timer.segmentChangedAction = { bell in
+            if let bell {
+                capturedBells.append(bell)
+            }
+        }
+
+        timer.refresh(now: referenceDate.addingTimeInterval(-30))
+        timer.refresh(now: referenceDate.addingTimeInterval(1))
+        timer.refresh(now: referenceDate.addingTimeInterval(61))
+
+        XCTAssertEqual(capturedBells, [startBell, endBell])
     }
 
-    override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
+    @MainActor
+    func testDayTimerRespectsLoopSetting() throws {
+        let segment = Day.Segment(name: "Meditate", duration: 60, endBell: .singleBell)
+        let referenceDate = Date(timeIntervalSinceReferenceDate: 2_000)
+
+        let loopingTimer = DayTimer(
+            startTime: 0,
+            segments: [segment],
+            startBell: .singleBell,
+            loopDays: true,
+            currentDate: referenceDate
+        )
+        let nonLoopingTimer = DayTimer(
+            startTime: 0,
+            segments: [segment],
+            startBell: .singleBell,
+            loopDays: false,
+            currentDate: referenceDate
+        )
+
+        let originalLoopingStart = loopingTimer.startTime
+        let originalNonLoopingStart = nonLoopingTimer.startTime
+
+        let oneDayLater = referenceDate.addingTimeInterval(86_400 + 120)
+
+        loopingTimer.refresh(now: oneDayLater)
+        nonLoopingTimer.refresh(now: oneDayLater)
+
+        let expectedLoopingStart = try XCTUnwrap(Calendar.current.date(byAdding: .day, value: 1, to: originalLoopingStart))
+        XCTAssertEqual(loopingTimer.startTime, expectedLoopingStart)
+        XCTAssertEqual(nonLoopingTimer.startTime, originalNonLoopingStart)
     }
 
-    func testExample() throws {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-        // Any test you write for XCTest can be annotated as throws and async.
-        // Mark your test throws to produce an unexpected failure when your test encounters an uncaught error.
-        // Mark your test async to allow awaiting for asynchronous code to complete. Check the results with assertions afterwards.
-    }
+    func testSegmentSchedulesMatchesSegments() {
+        let day = Day.openingDay
+        let schedules = DayDetailEditView.segmentSchedules(for: day)
 
-    func testPerformanceExample() throws {
-        // This is an example of a performance test case.
-        self.measure {
-            // Put the code you want to measure the time of here.
+        XCTAssertEqual(schedules.count, day.segments.count)
+        for segment in day.segments {
+            XCTAssertNotNil(schedules[segment.id])
         }
     }
 
+    func testSegmentSchedulesEmptyDay() {
+        var day = Day.emptyDay
+        day.segments = []
+        let schedules = DayDetailEditView.segmentSchedules(for: day)
+        XCTAssertTrue(schedules.isEmpty)
+    }
+
+    func testDurationConversionRoundTrip() {
+        XCTAssertEqual(DayDetailEditView.minutes(from: 5400), 90)
+        XCTAssertEqual(DayDetailEditView.timeInterval(fromMinutes: 90), 5400)
+    }
+
+    func testDurationConversionMinimum() {
+        XCTAssertEqual(DayDetailEditView.minutes(from: 0), 1)
+        XCTAssertEqual(DayDetailEditView.timeInterval(fromMinutes: 0), 60)
+    }
+
+    func testClampedMinutesRespectsBounds() {
+        XCTAssertEqual(DayDetailEditView.clampedMinutes(0), 1)
+        XCTAssertEqual(DayDetailEditView.clampedMinutes(DayDetailEditView.maxDurationMinutes + 10), DayDetailEditView.maxDurationMinutes)
+        XCTAssertEqual(DayDetailEditView.clampedMinutes(90), 90)
+    }
 }

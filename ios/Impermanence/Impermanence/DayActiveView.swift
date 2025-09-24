@@ -6,19 +6,33 @@
 //
 
 import SwiftUI
-import AVFoundation
 import UIKit
 
 struct DayActiveView: View {
     @Binding var day: Day
     @StateObject var dayTimer: DayTimer
 
-    private var player: AVPlayer { AVPlayer.bellPlayer }
+    @AppStorage("loopDays") private var loopDaysSetting = true
+
+    private let bellPlayer = BellPlayer.shared
 
     init(day: Binding<Day>) {
         self._day = day
+        let storedLoopSetting: Bool = {
+            if UserDefaults.standard.object(forKey: "loopDays") == nil {
+                return true
+            }
+            return UserDefaults.standard.bool(forKey: "loopDays")
+        }()
 
-        _dayTimer = StateObject(wrappedValue: DayTimer(startTime: day.wrappedValue.startTime, segments: day.wrappedValue.segments))
+        _dayTimer = StateObject(
+            wrappedValue: DayTimer(
+                startTime: day.wrappedValue.startTime,
+                segments: day.wrappedValue.segments,
+                startBell: day.wrappedValue.startBell,
+                loopDays: storedLoopSetting
+            )
+        )
     }
 
     var body: some View {
@@ -49,10 +63,11 @@ struct DayActiveView: View {
         .padding()
         .foregroundColor(day.theme.accentColor)
         .onAppear {
-            dayTimer.segmentChangedAction = {
-                player.seek(to: .zero)
-                player.play()
+            dayTimer.segmentChangedAction = { bell in
+                guard let bell else { return }
+                bellPlayer.play(bell: bell)
             }
+            dayTimer.loopDays = loopDaysSetting
             dayTimer.startDay()
             UIApplication.shared.isIdleTimerDisabled = true
         }
@@ -60,7 +75,20 @@ struct DayActiveView: View {
             dayTimer.stopDay()
             UIApplication.shared.isIdleTimerDisabled = false
         }
+        .onChange(of: loopDaysSetting) { newValue in
+            dayTimer.loopDays = newValue
+        }
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    bellPlayer.play(bell: day.manualBell)
+                } label: {
+                    Image(systemName: "bell")
+                }
+                .accessibilityLabel("Ring bell manually")
+            }
+        }
     }
 }
 
