@@ -13,6 +13,7 @@ struct DaysView: View {
     @State private var isPresentingSettingsView = false
     @State private var isPresentingAboutView = false
     @State private var isPresentingNewDayView = false
+    @State private var isPresentingQuickSit = false
     let saveAction: ()->Void
 
     var body: some View {
@@ -47,6 +48,12 @@ struct DaysView: View {
                     }
                     .accessibilityLabel("Settings")
                     Button(action: {
+                        isPresentingQuickSit = true
+                    }) {
+                        Image(systemName: "stopwatch")
+                    }
+                    .accessibilityLabel("Quick Sit")
+                    Button(action: {
                         isPresentingNewDayView = true
                     }) {
                         Image(systemName: "plus")
@@ -62,6 +69,9 @@ struct DaysView: View {
             }
             .sheet(isPresented: $isPresentingAboutView) {
                 AboutView(isPresentingAboutView: $isPresentingAboutView)
+            }
+            .sheet(isPresented: $isPresentingQuickSit) {
+                QuickSitSheet(isPresented: $isPresentingQuickSit)
             }
             .onChange(of: scenePhase) { phase in
                 if phase == .inactive { saveAction() }

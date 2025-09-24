@@ -37,6 +37,7 @@
 		FA8992E72A8EC25400971377 /* DayStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA8992E62A8EC25400971377 /* DayStore.swift */; };
 		FA8992F12A9A097D00971377 /* TimeFormatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA8992F02A9A097D00971377 /* TimeFormatting.swift */; };
 		FA8992F32A9A1F2F00971377 /* BellCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA8992F22A9A1F2F00971377 /* BellCatalog.swift */; };
+		FA8992F52A9A4A6800971377 /* QuickSitSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA8992F42A9A4A6800971377 /* QuickSitSheet.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -89,6 +90,7 @@
 		FA8992E62A8EC25400971377 /* DayStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayStore.swift; sourceTree = "<group>"; };
 		FA8992F02A9A097D00971377 /* TimeFormatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeFormatting.swift; sourceTree = "<group>"; };
 		FA8992F22A9A1F2F00971377 /* BellCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BellCatalog.swift; sourceTree = "<group>"; };
+		FA8992F42A9A4A6800971377 /* QuickSitSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickSitSheet.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -157,6 +159,7 @@
 				FA8992D72A8C95BC00971377 /* SettingsView.swift */,
 				FA8992D92A8C9A6300971377 /* AboutView.swift */,
 				FA8992E32A8D59A600971377 /* NewDaySheet.swift */,
+				FA8992F42A9A4A6800971377 /* QuickSitSheet.swift */,
 				FA8992F02A9A097D00971377 /* TimeFormatting.swift */,
 			);
 			path = Impermanence;
@@ -336,6 +339,7 @@
 			files = (
 				FA8992F12A9A097D00971377 /* TimeFormatting.swift in Sources */,
 				FA8992F32A9A1F2F00971377 /* BellCatalog.swift in Sources */,
+				FA8992F52A9A4A6800971377 /* QuickSitSheet.swift in Sources */,
 				FA8992DC2A8D43C000971377 /* BellPlayer.swift in Sources */,
 				FA8992AA2A7EAFFA00971377 /* Theme.swift in Sources */,
 				FA8992C42A88031400971377 /* DayActiveView.swift in Sources */,
