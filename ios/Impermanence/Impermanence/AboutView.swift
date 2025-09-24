@@ -19,7 +19,7 @@ struct AboutView: View {
                 Text("For the benefit of all beings ☸️")
                 Divider()
                     .padding()
-                Text("Copyright 2025, Neversink LLC")
+                Text("Copyright 2025, Alex Ellis")
                 Text("Contact: apellis@gmail.com")
                 Divider()
                     .padding()
