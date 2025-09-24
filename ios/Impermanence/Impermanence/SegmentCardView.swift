@@ -12,15 +12,17 @@ struct SegmentCardView: View {
     let startTime: Date
     let endTime: Date
     let theme: Theme
+    let bell: Bell
     let useTheme: Bool
     let highlighted: Bool
     @AppStorage("use24HourClock") private var use24HourClock = false
 
-    init(segment: Day.Segment, startTime: Date, endTime: Date, theme: Theme, useTheme: Bool = false, highlighted: Bool = false) {
+    init(segment: Day.Segment, startTime: Date, endTime: Date, theme: Theme, bell: Bell, useTheme: Bool = false, highlighted: Bool = false) {
         self.segment = segment
         self.startTime = startTime
         self.endTime = endTime
         self.theme = theme
+        self.bell = bell
         self.useTheme = useTheme
         self.highlighted = highlighted
     }
@@ -68,12 +70,12 @@ struct SegmentCardView: View {
 
     private var bellColumn: some View {
         HStack(spacing: 4) {
-            Text("\(segment.endBell.numRings)")
+            Text("\(bell.numRings)")
                 .font(.caption)
             Image(systemName: "bell")
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("bell rings \(segment.endBell.numRings)")
+        .accessibilityLabel("bell rings \(bell.numRings)")
     }
 }
 
@@ -89,9 +91,10 @@ extension View {
 }
 
 struct SegmentCardView_Previews: PreviewProvider {
-    static var segment = Day.Segment(name: "Sit", duration: TimeInterval(45 * 60), endBell: Bell.singleBell)
+    static var segment = Day.Segment(name: "Sit", duration: TimeInterval(45 * 60))
+    static var bell = Bell.singleBell
     static var previews: some View {
-        SegmentCardView(segment: segment, startTime: Date(), endTime: Date().addingTimeInterval(segment.duration), theme: .sky)
+        SegmentCardView(segment: segment, startTime: Date(), endTime: Date().addingTimeInterval(segment.duration), theme: .sky, bell: bell)
             .previewLayout(.fixed(width: 400, height: 60))
     }
 }

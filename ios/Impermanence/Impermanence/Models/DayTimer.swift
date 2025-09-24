@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftUI
 
 @MainActor
 final class DayTimer: ObservableObject {
@@ -50,6 +51,7 @@ final class DayTimer: ObservableObject {
     init(startTime: TimeInterval = 0,
          segments: [Day.Segment] = [],
          startBell: Bell = .singleBell,
+         defaultBell: Bell = .singleBell,
          loopDays: Bool = true,
          currentDate: Date = Date.now) {
         self.startBell = startBell
@@ -73,7 +75,7 @@ final class DayTimer: ObservableObject {
                     name: segment.name,
                     startTime: timeCursor,
                     endTime: timeCursor.addingTimeInterval(segment.duration),
-                    endBell: segment.endBell
+                    endBell: segment.resolvedEndBell(defaultBell: defaultBell)
                 )
             )
             timeCursor.addTimeInterval(segment.duration)
@@ -158,8 +160,10 @@ final class DayTimer: ObservableObject {
         if index > 0 && index - 1 < segments.count {
             segments[index - 1].rang = true
         }
-        segmentIndex = index
-        activeSegmentName = segmentText
+        withAnimation(.easeInOut(duration: 0.25)) {
+            segmentIndex = index
+            activeSegmentName = segmentText
+        }
         updateActiveTimes(for: index, now: now)
     }
 

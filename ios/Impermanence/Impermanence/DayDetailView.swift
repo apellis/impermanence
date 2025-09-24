@@ -46,7 +46,14 @@ struct DayDetailView: View {
             .listSectionSeparator(.hidden)
             Section(header: Text("Segments")) {
                 ForEach(day.segments.indices, id: \.self) { i in
-                    SegmentCardView(segment: day.segments[i], startTime: day.segmentStartEndTimes[i].0, endTime: day.segmentStartEndTimes[i].1, theme: day.theme)
+                    let segment = day.segments[i]
+                    let start = day.segmentStartEndTimes[i].0
+                    let end = day.segmentStartEndTimes[i].1
+                    SegmentCardView(segment: segment,
+                                    startTime: start,
+                                    endTime: end,
+                                    theme: day.theme,
+                                    bell: segment.resolvedEndBell(defaultBell: day.defaultBell))
                         .listRowSeparator(.hidden)
                 }
             }

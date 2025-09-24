@@ -14,13 +14,14 @@ final class ImpermanenceTests: XCTestCase {
     func testDayTimerRingsStartAndEndBells() {
         let startBell = Bell(soundId: 0, numRings: 2)
         let endBell = Bell(soundId: 0, numRings: 3)
-        let segment = Day.Segment(name: "Meditate", duration: 60, endBell: endBell)
+        let segment = Day.Segment(name: "Meditate", duration: 60, customEndBell: endBell)
         let referenceDate = Date(timeIntervalSinceReferenceDate: 1_000)
 
         let timer = DayTimer(
             startTime: 0,
             segments: [segment],
             startBell: startBell,
+            defaultBell: .singleBell,
             loopDays: false,
             currentDate: referenceDate
         )
@@ -41,13 +42,14 @@ final class ImpermanenceTests: XCTestCase {
 
     @MainActor
     func testDayTimerRespectsLoopSetting() throws {
-        let segment = Day.Segment(name: "Meditate", duration: 60, endBell: .singleBell)
+        let segment = Day.Segment(name: "Meditate", duration: 60)
         let referenceDate = Date(timeIntervalSinceReferenceDate: 2_000)
 
         let loopingTimer = DayTimer(
             startTime: 0,
             segments: [segment],
             startBell: .singleBell,
+            defaultBell: .singleBell,
             loopDays: true,
             currentDate: referenceDate
         )
@@ -55,6 +57,7 @@ final class ImpermanenceTests: XCTestCase {
             startTime: 0,
             segments: [segment],
             startBell: .singleBell,
+            defaultBell: .singleBell,
             loopDays: false,
             currentDate: referenceDate
         )

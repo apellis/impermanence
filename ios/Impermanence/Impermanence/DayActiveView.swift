@@ -30,6 +30,7 @@ struct DayActiveView: View {
                 startTime: day.wrappedValue.startTime,
                 segments: day.wrappedValue.segments,
                 startBell: day.wrappedValue.startBell,
+                defaultBell: day.wrappedValue.defaultBell,
                 loopDays: storedLoopSetting
             )
         )
@@ -54,8 +55,16 @@ struct DayActiveView: View {
                         .font(.headline)
                         .padding(.top)
                     ForEach(day.segments.indices, id: \.self) { i in
-                        SegmentCardView(segment: day.segments[i], startTime: day.segmentStartEndTimes[i].0, endTime: day.segmentStartEndTimes[i].1, theme: day.theme, useTheme: true, highlighted: i == dayTimer.segmentIndex)
+                        let segment = day.segments[i]
+                        SegmentCardView(segment: segment,
+                                        startTime: day.segmentStartEndTimes[i].0,
+                                        endTime: day.segmentStartEndTimes[i].1,
+                                        theme: day.theme,
+                                        bell: segment.resolvedEndBell(defaultBell: day.defaultBell),
+                                        useTheme: true,
+                                        highlighted: i == dayTimer.segmentIndex)
                     }
+                    .animation(.easeInOut(duration: 0.25), value: dayTimer.segmentIndex)
                 }
                 .padding()
             }
@@ -81,12 +90,31 @@ struct DayActiveView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    bellPlayer.play(bell: day.manualBell)
+                Menu {
+                    Button {
+                        bellPlayer.play(bell: day.manualBell)
+                    } label: {
+                        Label("Ring now", systemImage: "play.circle")
+                    }
+
+                    Section("Manual bell sound") {
+                        Picker("Sound", selection: $day.manualBell.soundId) {
+                            ForEach(BellCatalog.sounds) { sound in
+                                Text(sound.displayName).tag(sound.id)
+                            }
+                        }
+                        .pickerStyle(.automatic)
+                    }
+
+                    Section("Chimes") {
+                        Stepper(value: $day.manualBell.numRings, in: 1...12) {
+                            Label("Chimes: \(day.manualBell.numRings)", systemImage: "bell")
+                        }
+                    }
                 } label: {
                     Image(systemName: "bell")
                 }
-                .accessibilityLabel("Ring bell manually")
+                .accessibilityLabel("Manual bell controls")
             }
         }
     }

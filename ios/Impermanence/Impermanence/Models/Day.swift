@@ -14,6 +14,7 @@ struct Day: Identifiable, Codable {
     var segments: [Segment]
     var startBell: Bell
     var manualBell: Bell
+    var defaultBell: Bell
     var theme: Theme
 
     var startTimeAsDate: Date {
@@ -44,14 +45,55 @@ struct Day: Identifiable, Codable {
         return ret
     }
 
-    init(id: UUID = UUID(), name: String, startTime: TimeInterval, segments: [Segment], startBell: Bell = Bell.singleBell, manualBell: Bell = Bell.singleBell, theme: Theme = Theme.bubblegum) {
+    init(id: UUID = UUID(), name: String, startTime: TimeInterval, segments: [Segment], startBell: Bell = Bell.singleBell, manualBell: Bell? = nil, defaultBell: Bell = Bell.singleBell, theme: Theme = Theme.bubblegum) {
         self.id = id
         self.name = name
         self.startTime = startTime
         self.segments = segments
         self.startBell = startBell
-        self.manualBell = manualBell
+        self.defaultBell = defaultBell
+        self.manualBell = manualBell ?? defaultBell
         self.theme = theme
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case startTime
+        case segments
+        case startBell
+        case manualBell
+        case defaultBell
+        case theme
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        startTime = try container.decode(TimeInterval.self, forKey: .startTime)
+        segments = try container.decode([Segment].self, forKey: .segments)
+        theme = try container.decode(Theme.self, forKey: .theme)
+
+        let decodedDefault = try container.decodeIfPresent(Bell.self, forKey: .defaultBell)
+        let decodedManual = try container.decodeIfPresent(Bell.self, forKey: .manualBell)
+        let decodedStart = try container.decodeIfPresent(Bell.self, forKey: .startBell)
+
+        defaultBell = decodedDefault ?? decodedManual ?? decodedStart ?? .singleBell
+        startBell = decodedStart ?? defaultBell
+        manualBell = decodedManual ?? defaultBell
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(name, forKey: .name)
+        try container.encode(startTime, forKey: .startTime)
+        try container.encode(segments, forKey: .segments)
+        try container.encode(startBell, forKey: .startBell)
+        try container.encode(manualBell, forKey: .manualBell)
+        try container.encode(defaultBell, forKey: .defaultBell)
+        try container.encode(theme, forKey: .theme)
     }
 
     var currentSegmentAndTimeRemaining: (Segment, TimeInterval)? {
@@ -65,7 +107,7 @@ struct Day: Identifiable, Codable {
     }
 
     static var emptyDay: Day {
-        Day(name: "", startTime: TimeInterval(), segments: [], startBell: Bell.singleBell, manualBell: Bell.singleBell, theme: Theme.teal)
+        Day(name: "", startTime: TimeInterval(), segments: [], startBell: Bell.singleBell, manualBell: nil, defaultBell: Bell.singleBell, theme: Theme.teal)
     }
 }
 
@@ -74,13 +116,54 @@ extension Day {
         var id: UUID
         var name: String
         var duration: TimeInterval
-        var endBell: Bell
 
-        init(id: UUID = UUID(), name: String, duration: TimeInterval, endBell: Bell = Bell.singleBell) {
+        private var endBellStorage: Bell?
+
+        init(id: UUID = UUID(), name: String, duration: TimeInterval, customEndBell: Bell? = nil) {
             self.id = id
             self.name = name
             self.duration = duration
-            self.endBell = endBell
+            self.endBellStorage = customEndBell
+        }
+
+        var customEndBell: Bell? {
+            get { endBellStorage }
+            set { endBellStorage = newValue }
+        }
+
+        func resolvedEndBell(defaultBell: Bell) -> Bell {
+            endBellStorage ?? defaultBell
+        }
+
+        mutating func useDefaultBell() {
+            endBellStorage = nil
+        }
+
+        mutating func setCustomEndBell(_ bell: Bell) {
+            endBellStorage = bell
+        }
+
+        enum CodingKeys: String, CodingKey {
+            case id
+            case name
+            case duration
+            case endBell
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(UUID.self, forKey: .id)
+            name = try container.decode(String.self, forKey: .name)
+            duration = try container.decode(TimeInterval.self, forKey: .duration)
+            endBellStorage = try container.decodeIfPresent(Bell.self, forKey: .endBell)
+        }
+
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(id, forKey: .id)
+            try container.encode(name, forKey: .name)
+            try container.encode(duration, forKey: .duration)
+            try container.encode(endBellStorage, forKey: .endBell)
         }
     }
 }
@@ -113,6 +196,9 @@ extension Day {
             Segment(name: "Walk", duration: TimeInterval(30 * 60)),
             Segment(name: "Sit", duration: TimeInterval(45 * 60)),
         ],
+        startBell: .singleBell,
+        manualBell: nil,
+        defaultBell: .singleBell,
         theme: .poppy
     )
     static let openingDay: Day = Day(
@@ -125,6 +211,9 @@ extension Day {
             Segment(name: "Walk", duration: TimeInterval(30 * 60)),
             Segment(name: "Sit", duration: TimeInterval(45 * 60)),
         ],
+        startBell: .singleBell,
+        manualBell: nil,
+        defaultBell: .singleBell,
         theme: .orange
     )
 }
