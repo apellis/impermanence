@@ -133,7 +133,7 @@ struct DayDetailEditView: View {
                         withAnimation {
                             let duration = TimeInterval(60 * 60 * newSegmentHours + 60 * newSegmentMinutes)
                             let customBell: Bell? = newSegmentUsesDefaultBell ? nil : Bell(soundId: newSegmentSoundId, numRings: newSegmentChimes)
-                            var segment = Day.Segment(name: newSegmentName, duration: duration, customEndBell: customBell)
+                            let segment = Day.Segment(name: newSegmentName, duration: duration, customEndBell: customBell)
                             day.segments.append(segment)
                             expandedSegmentIDs.insert(segment.id)
                             newSegmentName = ""
