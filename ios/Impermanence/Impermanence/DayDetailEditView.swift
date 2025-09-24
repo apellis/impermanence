@@ -9,12 +9,6 @@ import SwiftUI
 
 struct DayDetailEditView: View {
     @Binding var day: Day
-    @State private var newSegmentName = ""
-    @State private var newSegmentHours: Int = 0
-    @State private var newSegmentMinutes: Int = 0
-    @State private var newSegmentChimes: Int = 1
-    @State private var newSegmentUsesDefaultBell = true
-    @State private var newSegmentSoundId = BellCatalog.defaultSound.id
     @AppStorage("use24HourClock") private var use24HourClock = false
     @State private var expandedSegmentIDs: Set<UUID> = []
 
@@ -63,7 +57,7 @@ struct DayDetailEditView: View {
                         if expanded {
                             Divider()
                                 .padding(.horizontal)
-                            SegmentEditorRow(
+                            DaySegmentEditorRow(
                                 segment: binding,
                                 startTime: schedule?.0 ?? day.startTimeAsDate,
                                 endTime: schedule?.1 ?? day.startTimeAsDate,
@@ -93,62 +87,13 @@ struct DayDetailEditView: View {
                 .onMove { from, to in
                     day.segments.move(fromOffsets: from, toOffset: to)
                 }
-            }
-            .listSectionSeparator(.hidden)
-            Section(header: Text("New Segment")) {
-                VStack {
-                    TextField("New Segment Name", text: $newSegmentName)
-                    HStack {
-                        Picker("", selection: $newSegmentHours) {
-                            ForEach(0..<24, id: \.self) { i in
-                                Text("\(i)h").tag(i)
-                            }
-                        }
-                        .pickerStyle(WheelPickerStyle())
-                        Picker("", selection: $newSegmentMinutes) {
-                            ForEach(0..<60, id: \.self) { i in
-                                Text("\(i)min").tag(i)
-                            }
-                        }
-                        .pickerStyle(WheelPickerStyle())
-                    }
-                    .padding(.horizontal)
-                    .accessibilityElement(children: .combine)
-                    .accessibilityValue("\(newSegmentHours) hours, \(newSegmentMinutes) minutes")
-                    Toggle("Use day default bell", isOn: $newSegmentUsesDefaultBell)
-                        .toggleStyle(.switch)
-                    if !newSegmentUsesDefaultBell {
-                        Picker("Bell sound", selection: $newSegmentSoundId) {
-                            ForEach(BellCatalog.sounds) { sound in
-                                Text(sound.displayName).tag(sound.id)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        Stepper(value: $newSegmentChimes, in: 1...12) {
-                            Label("Chimes: \(newSegmentChimes)", systemImage: "bell")
-                                .accessibilityValue("\(newSegmentChimes)")
-                        }
-                    }
-                    Button(action: {
-                        withAnimation {
-                            let duration = TimeInterval(60 * 60 * newSegmentHours + 60 * newSegmentMinutes)
-                            let customBell: Bell? = newSegmentUsesDefaultBell ? nil : Bell(soundId: newSegmentSoundId, numRings: newSegmentChimes)
-                            let segment = Day.Segment(name: newSegmentName, duration: duration, customEndBell: customBell)
-                            day.segments.append(segment)
-                            expandedSegmentIDs.insert(segment.id)
-                            newSegmentName = ""
-                            newSegmentHours = 0
-                            newSegmentMinutes = 0
-                            newSegmentUsesDefaultBell = true
-                            newSegmentSoundId = day.defaultBell.soundId
-                            newSegmentChimes = day.defaultBell.numRings
-                        }
-                    }) {
-                        Text("Add")
-                            .accessibilityLabel("Add segment")
-                    }
-                    .disabled(newSegmentName.isEmpty || newSegmentHours < 0 || newSegmentMinutes < 0 || newSegmentHours + newSegmentMinutes == 0)
+
+                Button(action: addSegment) {
+                    Label("Add Segment", systemImage: "plus")
+                        .frame(maxWidth: .infinity)
                 }
+                .buttonStyle(.borderedProminent)
+                .tint(day.theme.mainColor)
             }
             .listSectionSeparator(.hidden)
             .listRowSeparator(.hidden)
@@ -156,8 +101,6 @@ struct DayDetailEditView: View {
         .scrollContentBackground(.hidden)
         .onAppear {
             expandedSegmentIDs = Set(day.segments.map(\.id))
-            newSegmentSoundId = day.defaultBell.soundId
-            newSegmentChimes = day.defaultBell.numRings
         }
         .onChange(of: day.segments.map(\.id)) { ids in
             let idSet = Set(ids)
@@ -165,14 +108,6 @@ struct DayDetailEditView: View {
         }
         .onChange(of: day.defaultBell) { newBell in
             day.manualBell = newBell
-            if newSegmentUsesDefaultBell {
-                newSegmentSoundId = newBell.soundId
-                newSegmentChimes = newBell.numRings
-            }
-        }
-        .onChange(of: newSegmentUsesDefaultBell) { useDefault in
-            newSegmentSoundId = day.defaultBell.soundId
-            newSegmentChimes = day.defaultBell.numRings
         }
     }
 }
@@ -217,9 +152,17 @@ extension DayDetailEditView {
         day.segments.insert(duplicate, at: index + 1)
         expandedSegmentIDs.insert(duplicate.id)
     }
+
+    private func addSegment() {
+        withAnimation {
+            let segment = Day.Segment(name: "", duration: DayDetailEditView.timeInterval(fromMinutes: 15), customEndBell: nil)
+            day.segments.append(segment)
+            expandedSegmentIDs.insert(segment.id)
+        }
+    }
 }
 
-private struct SegmentEditorRow: View {
+struct DaySegmentEditorRow: View {
     @Binding var segment: Day.Segment
     let startTime: Date
     let endTime: Date
@@ -348,7 +291,7 @@ private struct SegmentEditorRow: View {
     }
 }
 
-private struct BellSelectionControl: View {
+struct BellSelectionControl: View {
     let title: String
     @Binding var bell: Bell
 
