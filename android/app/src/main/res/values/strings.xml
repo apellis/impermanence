@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Impermanence</string>
+    <string name="manual_bell_controls">Manual bell controls</string>
+    <string name="segment_duration">Duration: %1$s</string>
+    <string name="segment_duration_minutes">%1$d min</string>
+    <string name="notification_running_day">Day timer running: %1$s</string>
+    <string name="notification_channel_name">Day timer</string>
+</resources>
