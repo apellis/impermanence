@@ -32,8 +32,8 @@ struct DayDetailEditView: View {
                     // TODO add a help button using SF Symbol questionmark.circle with instructions for editing
                 }
             ) {
-                ForEach(Array(day.segments.enumerated()), id: \.element.id) { index, segment in
-                    let binding = $day.segments[index]
+                ForEach(day.segments) { segment in
+                    let binding = safeBinding(for: segment.id)
                     let schedule = segmentScheduleMap[segment.id]
                     let resolvedBell = segment.resolvedEndBell(defaultBell: day.defaultBell)
 
@@ -63,7 +63,7 @@ struct DayDetailEditView: View {
                                 endTime: schedule?.1 ?? day.startTimeAsDate,
                                 use24HourClock: use24HourClock,
                                 defaultBell: day.defaultBell,
-                                onDuplicate: { duplicateSegment(at: index) }
+                                onDuplicate: { duplicateSegment(id: segment.id) }
                             )
                             .padding(.horizontal)
                             .padding(.bottom, 12)
@@ -80,7 +80,9 @@ struct DayDetailEditView: View {
                     .padding(.vertical, 4)
                 }
                 .onDelete { indices in
-                    let ids = indices.compactMap { day.segments[$0].id }
+                    let ids = indices.compactMap { index in
+                        day.segments.indices.contains(index) ? day.segments[index].id : nil
+                    }
                     day.segments.remove(atOffsets: indices)
                     ids.forEach { expandedSegmentIDs.remove($0) }
                 }
@@ -145,8 +147,8 @@ extension DayDetailEditView {
         }
     }
 
-    private func duplicateSegment(at index: Int) {
-        guard index < day.segments.count else { return }
+    private func duplicateSegment(id: UUID) {
+        guard let index = day.segments.firstIndex(where: { $0.id == id }) else { return }
         var duplicate = day.segments[index]
         duplicate.id = UUID()
         day.segments.insert(duplicate, at: index + 1)
@@ -159,6 +161,19 @@ extension DayDetailEditView {
             day.segments.append(segment)
             expandedSegmentIDs.insert(segment.id)
         }
+    }
+
+    private func safeBinding(for id: UUID) -> Binding<Day.Segment> {
+        Binding(
+            get: {
+                day.segments.first(where: { $0.id == id }) ?? Day.Segment(name: "", duration: 0, customEndBell: nil)
+            },
+            set: { updated in
+                if let index = day.segments.firstIndex(where: { $0.id == id }) {
+                    day.segments[index] = updated
+                }
+            }
+        )
     }
 }
 

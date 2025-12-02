@@ -35,13 +35,13 @@ struct SegmentProgressView: View {
                 VStack(alignment: .leading) {
                     Text("Elapsed")
                         .font(.caption)
-                    Label("\(formatter.string(from: timeElapsed)!)", systemImage: "hourglass.bottomhalf.fill")
+                    Label("\(safeString(for: timeElapsed))", systemImage: "hourglass.bottomhalf.fill")
                 }
                 Spacer()
                 VStack(alignment: .trailing) {
                     Text("Remaining")
                         .font(.caption)
-                    Label("\(formatter.string(from: timeRemaining)!)", systemImage: "hourglass.tophalf.fill")
+                    Label("\(safeString(for: timeRemaining))", systemImage: "hourglass.tophalf.fill")
                         .labelStyle(.trailingIcon)
                 }
             }
@@ -50,6 +50,10 @@ struct SegmentProgressView: View {
         .accessibilityLabel("Time remaining")
         .accessibilityValue("\(timeRemaining)")
         .padding([.top, .horizontal])
+    }
+
+    private func safeString(for interval: TimeInterval) -> String {
+        formatter.string(from: max(0, interval)) ?? "--:--"
     }
 }
 
