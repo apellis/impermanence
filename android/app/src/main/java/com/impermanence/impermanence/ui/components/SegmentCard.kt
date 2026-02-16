@@ -34,11 +34,18 @@ fun SegmentCard(
     bell: Bell,
     theme: Theme,
     use24HourClock: Boolean,
+    useTheme: Boolean = false,
     highlighted: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    val containerColor: Color = if (highlighted) theme.mainColor else MaterialTheme.colorScheme.surfaceVariant
-    val contentColor: Color = if (highlighted) theme.accentColor else MaterialTheme.colorScheme.onSurfaceVariant
+    val containerColor: Color = when {
+        useTheme || highlighted -> theme.mainColor
+        else -> MaterialTheme.colorScheme.surfaceVariant
+    }
+    val contentColor: Color = when {
+        useTheme || highlighted -> theme.accentColor
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
 
     Surface(
         modifier = modifier,

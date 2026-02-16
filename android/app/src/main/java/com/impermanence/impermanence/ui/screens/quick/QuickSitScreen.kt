@@ -1,5 +1,6 @@
 package com.impermanence.impermanence.ui.screens.quick
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -63,6 +64,10 @@ fun QuickSitScreen(
 
     val totalSeconds = minutes * 60
 
+    BackHandler(enabled = isRunning) {
+        // Keep behavior aligned with iOS: disable close while a session is running.
+    }
+
     fun stopTimer() {
         timerJob?.cancel()
         timerJob = null
@@ -96,9 +101,8 @@ fun QuickSitScreen(
                 title = { Text("Quick Sit") },
                 navigationIcon = {
                     IconButton(onClick = {
-                        stopTimer()
                         onClose()
-                    }) {
+                    }, enabled = !isRunning) {
                         Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Close")
                     }
                 },

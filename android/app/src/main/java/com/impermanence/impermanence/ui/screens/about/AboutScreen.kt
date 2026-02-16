@@ -60,7 +60,8 @@ fun AboutScreen(onBack: () -> Unit) {
             Text("Impermanence", style = MaterialTheme.typography.headlineSmall)
             Text("Version $versionName", style = MaterialTheme.typography.bodyMedium)
             Text("For the benefit of all beings ☸️", style = MaterialTheme.typography.bodyMedium)
-            Text("© 2025 Alex Ellis", style = MaterialTheme.typography.bodySmall)
+            Text("© 2026 Alex Ellis", style = MaterialTheme.typography.bodySmall)
+            Text("Contact: apellis@gmail.com", style = MaterialTheme.typography.bodySmall)
             Text("Future features:", style = MaterialTheme.typography.titleMedium)
             Text("• More bell sound options\n• Multi-day retreat plans", style = MaterialTheme.typography.bodyMedium)
         }

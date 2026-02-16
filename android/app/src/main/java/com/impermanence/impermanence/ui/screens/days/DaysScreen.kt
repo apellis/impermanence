@@ -24,6 +24,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.impermanence.impermanence.model.Day
 import com.impermanence.impermanence.ui.components.DayCard
@@ -61,6 +63,7 @@ fun DaysScreen(
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
+                modifier = Modifier.semantics { contentDescription = "New Day" },
                 onClick = onAddDay,
                 icon = { Icon(imageVector = Icons.Default.Add, contentDescription = null) },
                 text = { Text("New Day") }

@@ -32,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.impermanence.impermanence.domain.audio.BellPlayer
@@ -67,6 +68,7 @@ fun DayActiveScreen(
     KeepScreenOn(active = timerState.status == DayTimerEngine.TimerStatus.ACTIVE)
 
     Scaffold(
+        containerColor = day.theme.mainColor,
         topBar = {
             TopAppBar(
                 title = { Text(day.name) },
@@ -80,7 +82,12 @@ fun DayActiveScreen(
                         Icon(imageVector = Icons.Default.Notifications, contentDescription = "Ring now")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors()
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = day.theme.mainColor,
+                    titleContentColor = day.theme.accentColor,
+                    navigationIconContentColor = day.theme.accentColor,
+                    actionIconContentColor = day.theme.accentColor
+                )
             )
         }
     ) { padding ->
@@ -93,14 +100,19 @@ fun DayActiveScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                Text(timerState.activeSegmentName, style = MaterialTheme.typography.titleLarge)
+                Text(
+                    timerState.activeSegmentName,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = day.theme.accentColor
+                )
             }
 
             if (timerState.activeSegmentTimeElapsed >= 0 && timerState.activeSegmentTimeRemaining >= 0) {
                 item {
                     SegmentProgress(
                         elapsedSeconds = timerState.activeSegmentTimeElapsed,
-                        remainingSeconds = timerState.activeSegmentTimeRemaining
+                        remainingSeconds = timerState.activeSegmentTimeRemaining,
+                        accentColor = day.theme.accentColor
                     )
                 }
             }
@@ -108,6 +120,7 @@ fun DayActiveScreen(
             item {
                 ManualBellControls(
                     manualBell = manualBell,
+                    accentColor = day.theme.accentColor,
                     onBellChange = { newBell ->
                         manualBell = newBell
                         onManualBellChange(day.copy(manualBell = newBell))
@@ -124,6 +137,7 @@ fun DayActiveScreen(
                     bell = segment.resolvedBell(displayDay.defaultBell),
                     theme = displayDay.theme,
                     use24HourClock = use24HourClock,
+                    useTheme = true,
                     highlighted = index == timerState.segmentIndex,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -133,7 +147,11 @@ fun DayActiveScreen(
 }
 
 @Composable
-private fun SegmentProgress(elapsedSeconds: Long, remainingSeconds: Long) {
+private fun SegmentProgress(
+    elapsedSeconds: Long,
+    remainingSeconds: Long,
+    accentColor: Color
+) {
     val total = elapsedSeconds + remainingSeconds
     val progress = if (total <= 0) 0f else elapsedSeconds.toFloat() / total
     Column(
@@ -142,27 +160,42 @@ private fun SegmentProgress(elapsedSeconds: Long, remainingSeconds: Long) {
             .padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        LinearProgressIndicator(progress = progress, modifier = Modifier.fillMaxWidth())
+        LinearProgressIndicator(
+            progress = progress,
+            modifier = Modifier.fillMaxWidth(),
+            color = accentColor,
+            trackColor = accentColor.copy(alpha = 0.24f)
+        )
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
                 text = "Elapsed: ${formatDuration(elapsedSeconds)}",
-                style = MaterialTheme.typography.bodySmall
+                style = MaterialTheme.typography.bodySmall,
+                color = accentColor
             )
             Text(
                 text = "Remaining: ${formatDuration(remainingSeconds)}",
-                style = MaterialTheme.typography.bodySmall
+                style = MaterialTheme.typography.bodySmall,
+                color = accentColor
             )
         }
     }
 }
 
 @Composable
-private fun ManualBellControls(manualBell: Bell, onBellChange: (Bell) -> Unit) {
+private fun ManualBellControls(
+    manualBell: Bell,
+    accentColor: Color,
+    onBellChange: (Bell) -> Unit
+) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Manual bell", style = MaterialTheme.typography.titleMedium)
+        Text(
+            "Manual bell",
+            style = MaterialTheme.typography.titleMedium,
+            color = accentColor
+        )
         BellSelectionControl(
             title = "Bell sound",
             bell = manualBell,
