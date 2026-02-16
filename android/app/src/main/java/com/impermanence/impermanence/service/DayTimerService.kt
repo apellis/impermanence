@@ -101,6 +101,12 @@ class DayTimerService : Service() {
                 evaluation.bell?.let { bell ->
                     BellPlayer.play(context, bell)
                 }
+                val shouldStop = evaluation.state.status == DayTimerEngine.TimerStatus.EMPTY ||
+                    (!loopDays && evaluation.state.status == DayTimerEngine.TimerStatus.COMPLETE)
+                if (shouldStop) {
+                    stopSelf()
+                    break
+                }
                 delay(500L)
             }
         }

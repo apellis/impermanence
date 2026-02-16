@@ -16,9 +16,11 @@ final class ImpermanenceTests: XCTestCase {
         let endBell = Bell(soundId: 0, numRings: 3)
         let segment = Day.Segment(name: "Meditate", duration: 60, customEndBell: endBell)
         let referenceDate = Date(timeIntervalSinceReferenceDate: 1_000)
+        let startOfDay = Calendar.current.startOfDay(for: referenceDate)
+        let startOffset = referenceDate.timeIntervalSince(startOfDay) + 30
 
         let timer = DayTimer(
-            startTime: 0,
+            startTime: startOffset,
             segments: [segment],
             startBell: startBell,
             defaultBell: .singleBell,
@@ -33,9 +35,9 @@ final class ImpermanenceTests: XCTestCase {
             }
         }
 
-        timer.refresh(now: referenceDate.addingTimeInterval(-30))
-        timer.refresh(now: referenceDate.addingTimeInterval(1))
-        timer.refresh(now: referenceDate.addingTimeInterval(61))
+        timer.refresh(now: referenceDate)
+        timer.refresh(now: referenceDate.addingTimeInterval(31))
+        timer.refresh(now: referenceDate.addingTimeInterval(91))
 
         XCTAssertEqual(capturedBells, [startBell, endBell])
     }

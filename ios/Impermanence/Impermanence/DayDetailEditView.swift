@@ -109,6 +109,7 @@ struct DayDetailEditView: View {
             expandedSegmentIDs = expandedSegmentIDs.intersection(idSet)
         }
         .onChange(of: day.defaultBell) { newBell in
+            day.startBell = newBell
             day.manualBell = newBell
         }
     }

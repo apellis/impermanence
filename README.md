@@ -12,5 +12,4 @@ A timer for meditation retreats. Open source and freely available on the iOS App
 
 ### Status
 
-* Coming soon!
-*
+* Native Android port in active development (source in [`android/`](android))
