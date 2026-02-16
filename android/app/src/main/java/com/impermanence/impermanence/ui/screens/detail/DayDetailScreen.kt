@@ -20,8 +20,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SmallTopAppBar
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -42,7 +42,7 @@ fun DayDetailScreen(
 ) {
     Scaffold(
         topBar = {
-            SmallTopAppBar(
+            TopAppBar(
                 title = { Text(day.name) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -54,7 +54,7 @@ fun DayDetailScreen(
                         Icon(imageVector = Icons.Default.Edit, contentDescription = "Edit")
                     }
                 },
-                colors = TopAppBarDefaults.smallTopAppBarColors()
+                colors = TopAppBarDefaults.topAppBarColors()
             )
         }
     ) { padding ->

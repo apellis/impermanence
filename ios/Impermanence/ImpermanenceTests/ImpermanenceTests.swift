@@ -109,4 +109,56 @@ final class ImpermanenceTests: XCTestCase {
         XCTAssertEqual(DayDetailEditView.clampedMinutes(DayDetailEditView.maxDurationMinutes + 10), DayDetailEditView.maxDurationMinutes)
         XCTAssertEqual(DayDetailEditView.clampedMinutes(90), 90)
     }
+
+    func testPortableCodecRoundTrip() throws {
+        let sourceDays = [Day.openingDay, Day.fullDay]
+        let data = try PortableDayPlanCodec.exportData(days: sourceDays)
+        let imported = try PortableDayPlanCodec.importDays(from: data)
+
+        XCTAssertEqual(imported.count, sourceDays.count)
+        XCTAssertEqual(imported[0].name, sourceDays[0].name)
+        XCTAssertEqual(imported[0].segments.count, sourceDays[0].segments.count)
+        XCTAssertEqual(imported[1].name, sourceDays[1].name)
+        XCTAssertEqual(imported[1].segments.count, sourceDays[1].segments.count)
+    }
+
+    func testPortableCodecDecodesAndroidStyleEnvelopeAndNormalizesValues() throws {
+        let json = """
+        {
+          "version": 1,
+          "days": [
+            {
+              "id": "B86D6CF6-49A8-4A2D-9192-9E7465A78A31",
+              "name": "Imported Day",
+              "startTimeSeconds": -120,
+              "segments": [
+                {
+                  "id": "50A08A8D-25B8-4D84-B2E3-9D84F942A2F7",
+                  "name": "Sit",
+                  "durationSeconds": 0,
+                  "customEndBell": { "soundId": 0, "numRings": 0 }
+                }
+              ],
+              "startBell": { "soundId": 0, "numRings": 0 },
+              "manualBell": { "soundId": 0, "numRings": 0 },
+              "defaultBell": { "soundId": 0, "numRings": 0 },
+              "theme": "teal"
+            }
+          ]
+        }
+        """.data(using: .utf8)!
+
+        let imported = try PortableDayPlanCodec.importDays(from: json)
+        let day = try XCTUnwrap(imported.first)
+
+        XCTAssertEqual(imported.count, 1)
+        XCTAssertEqual(day.name, "Imported Day")
+        XCTAssertEqual(Int(day.startTime), 24 * 60 * 60 - 120)
+        XCTAssertEqual(day.segments.count, 1)
+        XCTAssertEqual(Int(day.segments[0].duration), 1)
+        XCTAssertEqual(day.startBell.numRings, 1)
+        XCTAssertEqual(day.manualBell.numRings, 1)
+        XCTAssertEqual(day.defaultBell.numRings, 1)
+        XCTAssertEqual(day.segments[0].customEndBell?.numRings, 1)
+    }
 }

@@ -25,8 +25,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SmallTopAppBar
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -97,7 +97,7 @@ fun QuickSitScreen(
 
     Scaffold(
         topBar = {
-            SmallTopAppBar(
+            TopAppBar(
                 title = { Text("Quick Sit") },
                 navigationIcon = {
                     IconButton(onClick = {
@@ -106,7 +106,7 @@ fun QuickSitScreen(
                         Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Close")
                     }
                 },
-                colors = TopAppBarDefaults.smallTopAppBarColors()
+                colors = TopAppBarDefaults.topAppBarColors()
             )
         }
     ) { padding ->
@@ -240,7 +240,7 @@ private fun ProgressSection(totalSeconds: Int, secondsRemaining: Int, use24HourC
             .padding(vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        CircularProgressIndicator(progress = progress)
+        CircularProgressIndicator(progress = { progress })
         Spacer(modifier = Modifier.height(12.dp))
         val minutesRemaining = secondsRemaining / 60
         val secondsPart = secondsRemaining % 60

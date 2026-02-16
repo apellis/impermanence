@@ -3,6 +3,7 @@ package com.impermanence.impermanence.ui
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -27,8 +28,10 @@ class StartDayFlowTest {
         composeRule.onNodeWithText(dayName!!).performClick()
         composeRule.waitUntil(5_000) { hasNodeWithText("Start or Resume Day") }
         composeRule.onNodeWithText("Start or Resume Day").performClick()
-        composeRule.waitUntil(5_000) { hasNodeWithText("Manual bell") }
-        composeRule.onNodeWithText("Manual bell").assertIsDisplayed()
+        composeRule.waitUntil(5_000) { hasNodeWithContentDescription("Manual bell controls") }
+        composeRule.onNodeWithContentDescription("Manual bell controls").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Manual bell controls").performClick()
+        composeRule.onNodeWithText("Ring now").assertIsDisplayed()
     }
 
     private fun findSeedDayName(timeoutMillis: Long = 10_000L): String? {
@@ -55,5 +58,12 @@ class StartDayFlowTest {
 
     private fun hasNodeWithText(text: String): Boolean {
         return composeRule.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
+    }
+
+    private fun hasNodeWithContentDescription(contentDescription: String): Boolean {
+        return runCatching {
+            composeRule.onNodeWithContentDescription(contentDescription).fetchSemanticsNode()
+            true
+        }.getOrDefault(false)
     }
 }

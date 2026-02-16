@@ -59,6 +59,12 @@ class AppViewModel(
         }
     }
 
+    fun overwriteDays(days: List<Day>) {
+        viewModelScope.launch {
+            dayRepository.overwrite(days)
+        }
+    }
+
     fun deleteDay(dayId: String) {
         viewModelScope.launch {
             dayRepository.deleteDay(dayId)

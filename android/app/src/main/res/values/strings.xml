@@ -1,6 +1,26 @@
 <resources>
     <string name="app_name">Impermanence</string>
     <string name="manual_bell_controls">Manual bell controls</string>
+    <string name="manual_bell_sound">Manual bell sound</string>
+    <string name="manual_bell_chimes">Chimes: %1$d</string>
+    <string name="increase_chimes">Increase chimes</string>
+    <string name="decrease_chimes">Decrease chimes</string>
+    <string name="ring_now">Ring now</string>
+    <string name="settings_title">Settings</string>
+    <string name="setting_use_24h">Use 24-hour clock</string>
+    <string name="setting_use_24h_subtitle">Match your system preference.</string>
+    <string name="setting_loop_days">Loop days at midnight</string>
+    <string name="setting_loop_days_subtitle">Automatically restart each day schedule.</string>
+    <string name="setting_data">Data</string>
+    <string name="setting_data_subtitle">Import or export day plans as JSON.</string>
+    <string name="import_days">Import Days</string>
+    <string name="export_days">Export Days</string>
+    <string name="import_complete">Imported %1$d day plans.</string>
+    <string name="export_complete">Exported %1$d day plans.</string>
+    <string name="import_failed">Import failed: %1$s</string>
+    <string name="export_failed">Export failed: %1$s</string>
+    <string name="import_failed_unknown">Invalid file</string>
+    <string name="export_failed_unknown">Unable to write file</string>
     <string name="segment_duration">Duration: %1$s</string>
     <string name="segment_duration_minutes">%1$d min</string>
     <string name="notification_running_day">Day timer running: %1$s</string>

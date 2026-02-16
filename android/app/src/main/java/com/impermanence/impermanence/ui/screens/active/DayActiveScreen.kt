@@ -12,8 +12,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -33,13 +38,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.impermanence.impermanence.R
 import com.impermanence.impermanence.domain.audio.BellPlayer
 import com.impermanence.impermanence.model.Bell
+import com.impermanence.impermanence.model.BellCatalog
 import com.impermanence.impermanence.model.Day
 import com.impermanence.impermanence.domain.timer.DayTimerEngine
-import com.impermanence.impermanence.ui.components.BellSelectionControl
 import com.impermanence.impermanence.ui.components.SegmentCard
 import com.impermanence.impermanence.ui.viewmodel.DayActiveViewModel
 import com.impermanence.impermanence.util.KeepScreenOn
@@ -60,6 +67,12 @@ fun DayActiveScreen(
     )
     val timerState by viewModel.timerState.collectAsState()
     var manualBell by remember(day.id) { mutableStateOf(day.manualBell) }
+    var isManualBellMenuExpanded by remember { mutableStateOf(false) }
+
+    fun updateManualBell(newBell: Bell) {
+        manualBell = newBell
+        onManualBellChange(day.copy(manualBell = newBell))
+    }
 
     LaunchedEffect(loopDays) {
         viewModel.updateLoopDays(loopDays)
@@ -78,8 +91,74 @@ fun DayActiveScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { BellPlayer.play(application, manualBell) }) {
-                        Icon(imageVector = Icons.Default.Notifications, contentDescription = "Ring now")
+                    IconButton(onClick = { isManualBellMenuExpanded = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Notifications,
+                            contentDescription = stringResource(R.string.manual_bell_controls)
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = isManualBellMenuExpanded,
+                        onDismissRequest = { isManualBellMenuExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.ring_now)) },
+                            onClick = {
+                                BellPlayer.play(application, manualBell)
+                                isManualBellMenuExpanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.manual_bell_sound)) },
+                            onClick = {},
+                            enabled = false
+                        )
+                        BellCatalog.all.forEach { sound ->
+                            val isSelected = sound.id == manualBell.soundId
+                            DropdownMenuItem(
+                                text = { Text(sound.name) },
+                                onClick = {
+                                    updateManualBell(manualBell.copy(soundId = sound.id))
+                                },
+                                leadingIcon = {
+                                    if (isSelected) {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = null
+                                        )
+                                    }
+                                }
+                            )
+                        }
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.manual_bell_chimes, manualBell.numRings)) },
+                            onClick = {},
+                            enabled = false
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.decrease_chimes)) },
+                            onClick = {
+                                updateManualBell(
+                                    manualBell.copy(numRings = (manualBell.numRings - 1).coerceIn(1, 12))
+                                )
+                            },
+                            enabled = manualBell.numRings > 1,
+                            leadingIcon = {
+                                Icon(imageVector = Icons.Default.Remove, contentDescription = null)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.increase_chimes)) },
+                            onClick = {
+                                updateManualBell(
+                                    manualBell.copy(numRings = (manualBell.numRings + 1).coerceIn(1, 12))
+                                )
+                            },
+                            enabled = manualBell.numRings < 12,
+                            leadingIcon = {
+                                Icon(imageVector = Icons.Default.Add, contentDescription = null)
+                            }
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -117,17 +196,6 @@ fun DayActiveScreen(
                 }
             }
 
-            item {
-                ManualBellControls(
-                    manualBell = manualBell,
-                    accentColor = day.theme.accentColor,
-                    onBellChange = { newBell ->
-                        manualBell = newBell
-                        onManualBellChange(day.copy(manualBell = newBell))
-                    }
-                )
-            }
-
             itemsIndexed(displayDay.segments, key = { _, segment -> segment.id }) { index, segment ->
                 val schedule = displayDay.segmentSchedule().getOrNull(index) ?: (0 to 0)
                 SegmentCard(
@@ -161,7 +229,7 @@ private fun SegmentProgress(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         LinearProgressIndicator(
-            progress = progress,
+            progress = { progress },
             modifier = Modifier.fillMaxWidth(),
             color = accentColor,
             trackColor = accentColor.copy(alpha = 0.24f)
@@ -181,26 +249,6 @@ private fun SegmentProgress(
                 color = accentColor
             )
         }
-    }
-}
-
-@Composable
-private fun ManualBellControls(
-    manualBell: Bell,
-    accentColor: Color,
-    onBellChange: (Bell) -> Unit
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            "Manual bell",
-            style = MaterialTheme.typography.titleMedium,
-            color = accentColor
-        )
-        BellSelectionControl(
-            title = "Bell sound",
-            bell = manualBell,
-            onBellChange = onBellChange
-        )
     }
 }
 

@@ -65,7 +65,7 @@ struct DaysView: View {
                 NewDaySheet(days: $days, isPresentingNewDayView: $isPresentingNewDayView)
             }
             .sheet(isPresented: $isPresentingSettingsView) {
-                SettingsView(isPresentingSettingsView: $isPresentingSettingsView)
+                SettingsView(days: $days, isPresentingSettingsView: $isPresentingSettingsView)
             }
             .sheet(isPresented: $isPresentingAboutView) {
                 AboutView(isPresentingAboutView: $isPresentingAboutView)

@@ -13,32 +13,29 @@ struct AboutView: View {
 
     var body: some View {
         NavigationStack {
-            VStack{
-                Text("Impermanence")
-                Text("Version \(appVersion)")
-                Text("For the benefit of all beings ☸️")
-                Divider()
-                    .padding()
-                Text("Copyright 2026, Alex Ellis")
-                Text("Contact: apellis@gmail.com")
-                Divider()
-                    .padding()
-                Text("Future features")
-                Text("""
-                    * More bell sound options
-                    * Multi-day retreat plans
-                    """)
-                    .padding()
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button(action: {
-                            isPresentingAboutView = false
-                        }) {
-                            Image(systemName: "arrow.left")
-                        }
-                    }
+            Form {
+                Section {
+                    Text("Impermanence")
+                    Text("Version \(appVersion)")
+                    Text("For the benefit of all beings ☸️")
                 }
-                .navigationTitle("About")
+                Section("Copyright") {
+                    Text("© 2026 Alex Ellis")
+                    Text("Contact: apellis@gmail.com")
+                }
+                Section("Future features") {
+                    Text("More bell sound options")
+                    Text("Multi-day retreat plans")
+                }
+            }
+            .navigationTitle("About")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") {
+                        isPresentingAboutView = false
+                    }
+                    .accessibilityLabel("Close")
+                }
             }
         }
     }

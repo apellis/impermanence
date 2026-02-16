@@ -11,12 +11,19 @@ import SwiftUI
 struct ImpermanenceApp : App {
     @StateObject private var store = DayStore()
     @State private var persistenceErrorMessage: String?
+    @State private var pendingSaveTask: Task<Void, Never>?
 
     var body: some Scene {
         WindowGroup {
             DaysView(days: $store.days, saveAction: saveDays)
                 .task {
                     await loadDays()
+                }
+                .onReceive(store.$days.dropFirst()) { _ in
+                    scheduleSaveDays()
+                }
+                .onDisappear {
+                    pendingSaveTask?.cancel()
                 }
                 .alert("Unable to Access Saved Data",
                        isPresented: isShowingPersistenceError,
@@ -51,12 +58,22 @@ struct ImpermanenceApp : App {
     }
 
     private func saveDays() {
+        let snapshot = store.days
         Task {
             do {
-                try await store.save(days: store.days)
+                try await store.save(days: snapshot)
             } catch {
                 persistenceErrorMessage = "Failed to save changes. \(error.localizedDescription)"
             }
+        }
+    }
+
+    private func scheduleSaveDays() {
+        pendingSaveTask?.cancel()
+        pendingSaveTask = Task {
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            guard !Task.isCancelled else { return }
+            saveDays()
         }
     }
 }
