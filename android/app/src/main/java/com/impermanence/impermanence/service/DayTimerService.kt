@@ -10,6 +10,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.impermanence.impermanence.MainActivity
@@ -27,6 +28,8 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+
+private const val LOG_TAG = "DayTimerService"
 
 class DayTimerService : Service() {
 
@@ -60,11 +63,16 @@ class DayTimerService : Service() {
             return START_NOT_STICKY
         }
 
-        if (!wakeLock.isHeld) {
-            wakeLock.acquire()
+        if (!acquireWakeLock()) {
+            stopSelf()
+            return START_NOT_STICKY
         }
 
-        startForeground(NOTIFICATION_ID, buildNotification(day.name))
+        if (!startForegroundSafely(day.name)) {
+            releaseWakeLockIfHeld()
+            stopSelf()
+            return START_NOT_STICKY
+        }
 
         if (engine == null || currentDay?.id != day.id) {
             engine = DayTimerEngine(day, requestedLoopDays)
@@ -82,9 +90,7 @@ class DayTimerService : Service() {
         serviceScope.cancel()
         DayTimerCoordinator.clear()
         BellPlayer.stopAll()
-        if (::wakeLock.isInitialized && wakeLock.isHeld) {
-            wakeLock.release()
-        }
+        releaseWakeLockIfHeld()
         super.onDestroy()
     }
 
@@ -96,10 +102,18 @@ class DayTimerService : Service() {
         val context = applicationContext
         timerJob = serviceScope.launch {
             while (isActive) {
-                val evaluation = activeEngine.evaluate()
+                val evaluation = runCatching { activeEngine.evaluate() }
+                    .onFailure { throwable ->
+                        Log.e(LOG_TAG, "Timer evaluation failed; stopping service", throwable)
+                        stopSelf()
+                    }
+                    .getOrNull() ?: break
                 DayTimerCoordinator.update(evaluation.state)
                 evaluation.bell?.let { bell ->
-                    BellPlayer.play(context, bell)
+                    runCatching { BellPlayer.play(context, bell) }
+                        .onFailure { throwable ->
+                            Log.e(LOG_TAG, "Bell playback failed", throwable)
+                        }
                 }
                 val shouldStop = evaluation.state.status == DayTimerEngine.TimerStatus.EMPTY ||
                     (!loopDays && evaluation.state.status == DayTimerEngine.TimerStatus.COMPLETE)
@@ -146,6 +160,32 @@ class DayTimerService : Service() {
         }
     }
 
+    private fun acquireWakeLock(): Boolean {
+        if (wakeLock.isHeld) return true
+        return runCatching { wakeLock.acquire() }
+            .onFailure { throwable ->
+                Log.e(LOG_TAG, "Unable to acquire wake lock", throwable)
+            }
+            .isSuccess
+    }
+
+    private fun releaseWakeLockIfHeld() {
+        if (::wakeLock.isInitialized && wakeLock.isHeld) {
+            runCatching { wakeLock.release() }
+                .onFailure { throwable ->
+                    Log.e(LOG_TAG, "Unable to release wake lock", throwable)
+                }
+        }
+    }
+
+    private fun startForegroundSafely(dayName: String): Boolean {
+        return runCatching { startForeground(NOTIFICATION_ID, buildNotification(dayName)) }
+            .onFailure { throwable ->
+                Log.e(LOG_TAG, "Unable to start foreground service", throwable)
+            }
+            .isSuccess
+    }
+
     companion object {
         private const val EXTRA_DAY_JSON = "extra_day_json"
         private const val EXTRA_LOOP_DAYS = "extra_loop_days"
@@ -158,7 +198,10 @@ class DayTimerService : Service() {
                 putExtra(EXTRA_DAY_JSON, Json.encodeToString(day))
                 putExtra(EXTRA_LOOP_DAYS, loopDays)
             }
-            ContextCompat.startForegroundService(context, intent)
+            runCatching { ContextCompat.startForegroundService(context, intent) }
+                .onFailure { throwable ->
+                    Log.e(LOG_TAG, "Unable to request timer service start", throwable)
+                }
         }
 
         fun stop(context: Context) {
