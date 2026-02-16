@@ -139,7 +139,7 @@ class DayTimerService : Service() {
         )
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_notification_small)
             .setContentTitle(getString(R.string.app_name))
             .setContentText(getString(R.string.notification_running_day, dayName))
             .setContentIntent(pendingIntent)

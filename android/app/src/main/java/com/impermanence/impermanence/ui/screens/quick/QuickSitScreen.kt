@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.AssistChip
@@ -103,7 +103,7 @@ fun QuickSitScreen(
                     IconButton(onClick = {
                         onClose()
                     }, enabled = !isRunning) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Close")
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Close")
                     }
                 },
                 colors = TopAppBarDefaults.smallTopAppBarColors()
