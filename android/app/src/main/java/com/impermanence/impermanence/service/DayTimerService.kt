@@ -14,7 +14,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.impermanence.impermanence.MainActivity
-import com.impermanence.impermanence.R
+import com.neversink.impermanence.R
 import com.impermanence.impermanence.domain.audio.BellPlayer
 import com.impermanence.impermanence.domain.timer.DayTimerCoordinator
 import com.impermanence.impermanence.domain.timer.DayTimerEngine

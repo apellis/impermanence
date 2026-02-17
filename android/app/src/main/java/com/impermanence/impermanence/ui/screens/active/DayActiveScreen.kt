@@ -43,7 +43,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.impermanence.impermanence.R
+import com.neversink.impermanence.R
 import com.impermanence.impermanence.domain.audio.BellPlayer
 import com.impermanence.impermanence.model.Bell
 import com.impermanence.impermanence.model.BellCatalog

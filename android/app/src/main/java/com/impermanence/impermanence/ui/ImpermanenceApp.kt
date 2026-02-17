@@ -17,7 +17,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.impermanence.impermanence.AppContainer
-import com.impermanence.impermanence.R
+import com.neversink.impermanence.R
 import com.impermanence.impermanence.data.portability.PortableDayPlanCodec
 import com.impermanence.impermanence.model.Day
 import com.impermanence.impermanence.ui.screens.about.AboutScreen

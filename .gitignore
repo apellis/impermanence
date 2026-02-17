@@ -1,7 +1,19 @@
 .secrets
 .DS_Store
 
-android/MeditationRetreatTimer/app/release/
+# Build outputs and generated artifacts
+android/.gradle/
+android/build/
+android/app/build/
+android/app/outputs/
+android/app/release/
+android/app/debug/
+
+ios/Impermanence/build/
+ios/Impermanence/DerivedData/
+ios/Impermanence/*.xcresult
+
+# Xcode user data
 ios/Impermanence/Impermanence.xcodeproj/project.xcworkspace/xcuserdata/alex.xcuserdatad/UserInterfaceState.xcuserstate
 ios/Impermanence/Impermanence.xcodeproj/xcuserdata/
 ios/Impermanence/Impermanence.xcodeproj/project.xcworkspace/xcuserdata/
