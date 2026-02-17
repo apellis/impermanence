@@ -1,5 +1,6 @@
 package com.neversink.impermanence.ui.screens.quick
 
+import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -29,10 +30,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,9 +42,9 @@ import androidx.compose.ui.unit.dp
 import com.neversink.impermanence.domain.audio.BellPlayer
 import com.neversink.impermanence.model.Bell
 import com.neversink.impermanence.model.BellCatalog
-import kotlinx.coroutines.Job
+import com.neversink.impermanence.service.QuickSitAlarmScheduler
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlin.math.ceil
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,7 +53,6 @@ fun QuickSitScreen(
     onClose: () -> Unit
 ) {
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
 
     var minutes by remember { mutableStateOf(15) }
     var secondsRemaining by remember { mutableStateOf(0) }
@@ -60,7 +60,7 @@ fun QuickSitScreen(
     var selectedBellId by remember { mutableStateOf(BellCatalog.defaultSound.id) }
     var startChimes by remember { mutableStateOf(1) }
     var endChimes by remember { mutableStateOf(1) }
-    var timerJob by remember { mutableStateOf<Job?>(null) }
+    var endElapsedRealtime by remember { mutableStateOf(0L) }
 
     val totalSeconds = minutes * 60
 
@@ -68,11 +68,15 @@ fun QuickSitScreen(
         // Keep behavior aligned with iOS: disable close while a session is running.
     }
 
-    fun stopTimer() {
-        timerJob?.cancel()
-        timerJob = null
+    fun stopTimer(cancelScheduledAlarm: Boolean) {
+        if (cancelScheduledAlarm) {
+            QuickSitAlarmScheduler.cancel(context)
+        } else {
+            QuickSitAlarmScheduler.clearState(context)
+        }
         isRunning = false
         secondsRemaining = 0
+        endElapsedRealtime = 0L
     }
 
     fun playBell(chimes: Int) {
@@ -80,18 +84,47 @@ fun QuickSitScreen(
     }
 
     fun startTimer() {
-        stopTimer()
+        stopTimer(cancelScheduledAlarm = true)
+        val nextEndElapsedRealtime = SystemClock.elapsedRealtime() + (totalSeconds * 1_000L)
+        val scheduled = QuickSitAlarmScheduler.schedule(
+            context = context,
+            endElapsedRealtime = nextEndElapsedRealtime,
+            soundId = selectedBellId,
+            chimes = endChimes
+        )
+        if (!scheduled) return
+
+        endElapsedRealtime = nextEndElapsedRealtime
         secondsRemaining = totalSeconds
         isRunning = true
         playBell(startChimes)
-        timerJob = coroutineScope.launch {
-            while (secondsRemaining > 0) {
-                delay(1_000L)
-                secondsRemaining -= 1
+    }
+
+    LaunchedEffect(Unit) {
+        val scheduledEnd = QuickSitAlarmScheduler.scheduledEndElapsedRealtime(context)
+        val now = SystemClock.elapsedRealtime()
+        if (scheduledEnd > now) {
+            endElapsedRealtime = scheduledEnd
+            isRunning = true
+            secondsRemaining = ceil((scheduledEnd - now) / 1000.0).toInt().coerceAtLeast(1)
+        } else {
+            QuickSitAlarmScheduler.clearState(context)
+        }
+    }
+
+    LaunchedEffect(isRunning, endElapsedRealtime) {
+        if (!isRunning || endElapsedRealtime <= 0L) return@LaunchedEffect
+
+        while (isRunning) {
+            val now = SystemClock.elapsedRealtime()
+            val remainingMillis = (endElapsedRealtime - now).coerceAtLeast(0L)
+            if (remainingMillis <= 0L) {
+                stopTimer(cancelScheduledAlarm = false)
+                onClose()
+                break
             }
-            stopTimer()
-            playBell(endChimes)
-            onClose()
+            secondsRemaining = ceil(remainingMillis / 1000.0).toInt().coerceAtLeast(1)
+            delay(250L)
         }
     }
 
@@ -122,7 +155,7 @@ fun QuickSitScreen(
                 isRunning = isRunning,
                 onChange = { minutes = it.coerceIn(1, 180) },
                 onStart = {
-                    if (isRunning) stopTimer() else startTimer()
+                    if (isRunning) stopTimer(cancelScheduledAlarm = true) else startTimer()
                 }
             )
 

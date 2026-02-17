@@ -27,4 +27,6 @@
     <string name="segment_duration_minutes">%1$d min</string>
     <string name="notification_running_day">Day timer running: %1$s</string>
     <string name="notification_channel_name">Day timer</string>
+    <string name="quick_sit_notification_channel_name">Quick sit bell</string>
+    <string name="quick_sit_notification_playing">Playing quick sit bell</string>
 </resources>

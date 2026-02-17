@@ -10,6 +10,7 @@ import UIKit
 
 struct DayActiveView: View {
     @Binding var day: Day
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject var dayTimer: DayTimer
     @State private var scheduleRows: [ScheduleRowData]
     @State private var startTask: Task<Void, Never>?
@@ -113,6 +114,7 @@ struct DayActiveView: View {
         .padding(UIStyle.screenPadding)
         .foregroundColor(day.theme.accentColor)
         .onAppear {
+            BellNotificationScheduler.prepareAuthorization()
             dayTimer.segmentChangedAction = { bell in
                 guard let bell else { return }
                 bellPlayer.play(bell: bell)
@@ -125,6 +127,7 @@ struct DayActiveView: View {
                 guard !Task.isCancelled else { return }
                 dayTimer.startDay()
                 updateIdleTimerBehavior()
+                handleScenePhaseChange(scenePhase)
             }
             updateIdleTimerBehavior()
         }
@@ -132,16 +135,23 @@ struct DayActiveView: View {
             startTask?.cancel()
             startTask = nil
             dayTimer.stopDay()
+            BellNotificationScheduler.cancelDayBells()
             UIApplication.shared.isIdleTimerDisabled = false
         }
         .onChange(of: loopDaysSetting) { newValue in
             dayTimer.loopDays = newValue
+            if scenePhase != .active {
+                scheduleBackgroundBellNotificationsIfNeeded()
+            }
         }
         .onChange(of: keepScreenAwakeDuringActiveDay) { _ in
             updateIdleTimerBehavior()
         }
         .onChange(of: dayTimer.segmentIndex) { _ in
             updateIdleTimerBehavior()
+        }
+        .onChange(of: scenePhase) { phase in
+            handleScenePhaseChange(phase)
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -241,6 +251,25 @@ struct DayActiveView: View {
             return true
         }
         return index >= 0 && index < day.segments.count
+    }
+
+    private func handleScenePhaseChange(_ phase: ScenePhase) {
+        switch phase {
+        case .active:
+            BellNotificationScheduler.cancelDayBells()
+        case .inactive, .background:
+            scheduleBackgroundBellNotificationsIfNeeded()
+        @unknown default:
+            break
+        }
+    }
+
+    private func scheduleBackgroundBellNotificationsIfNeeded() {
+        guard isSessionActive else {
+            BellNotificationScheduler.cancelDayBells()
+            return
+        }
+        BellNotificationScheduler.scheduleDayBells(day: day, loopDays: loopDaysSetting)
     }
 
     private func formatDuration(_ duration: TimeInterval) -> String {

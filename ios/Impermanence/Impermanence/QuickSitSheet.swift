@@ -2,6 +2,7 @@ import SwiftUI
 
 struct QuickSitSheet: View {
     @Binding var isPresented: Bool
+    @Environment(\.scenePhase) private var scenePhase
     @AppStorage("use24HourClock") private var use24HourClock = false
 
     @State private var minutes: Int = 15
@@ -24,13 +25,13 @@ struct QuickSitSheet: View {
                     VStack(alignment: .leading, spacing: 12) {
                         Stepper(value: $minutes, in: 1...180, step: 1) {
                             Text("\(minutes) minutes")
+                                .font(.headline)
                         }
                         .disabled(isRunning)
 
-                        HStack(spacing: 12) {
+                        LazyVGrid(columns: adjustmentColumns, alignment: .leading, spacing: 8) {
                             adjustButton(label: "−5", systemImage: "minus.circle.fill", delta: -5)
                             adjustButton(label: "−1", systemImage: "minus.circle", delta: -1)
-                            Spacer()
                             adjustButton(label: "+1", systemImage: "plus.circle", delta: 1)
                             adjustButton(label: "+5", systemImage: "plus.circle.fill", delta: 5)
                         }
@@ -94,7 +95,27 @@ struct QuickSitSheet: View {
                 }
             }
             .onDisappear {
-                stopTimer()
+                if scenePhase == .active {
+                    stopTimer()
+                }
+            }
+            .onChange(of: scenePhase) { phase in
+                guard isRunning else {
+                    BellNotificationScheduler.cancelQuickSit()
+                    return
+                }
+
+                switch phase {
+                case .active:
+                    BellNotificationScheduler.cancelQuickSit()
+                    synchronizeFromElapsedTime()
+                case .inactive, .background:
+                    let remaining = max(secondsRemaining, 1)
+                    let bell = Bell(soundId: selectedBell, numRings: endChimes)
+                    BellNotificationScheduler.scheduleQuickSitCompletion(after: TimeInterval(remaining), bell: bell)
+                @unknown default:
+                    break
+                }
             }
             .onAppear {
                 selectedBell = BellCatalog.defaultSound.id
@@ -108,8 +129,12 @@ struct QuickSitSheet: View {
         minutes = max(1, min(180, minutes + delta))
     }
 
+    private var adjustmentColumns: [GridItem] {
+        [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)]
+    }
+
     private var quickDurationColumns: [GridItem] {
-        [GridItem(.adaptive(minimum: 90), spacing: 12)]
+        [GridItem(.adaptive(minimum: 72), spacing: 8)]
     }
 
     private func presetButton(for preset: Int) -> some View {
@@ -135,7 +160,7 @@ struct QuickSitSheet: View {
             Label(label, systemImage: systemImage)
                 .font(.subheadline)
                 .labelStyle(.titleAndIcon)
-                .frame(minWidth: 72)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .buttonStyle(.bordered)
         .tint(.accentColor)
@@ -156,6 +181,8 @@ struct QuickSitSheet: View {
     }
 
     private func startSession() {
+        BellNotificationScheduler.prepareAuthorization()
+        BellNotificationScheduler.cancelQuickSit()
         secondsRemaining = totalSeconds
         isRunning = true
         sessionStartDate = Date()
@@ -184,8 +211,24 @@ struct QuickSitSheet: View {
     private func stopTimer() {
         timer?.invalidate()
         timer = nil
+        BellNotificationScheduler.cancelQuickSit()
         isRunning = false
         sessionStartDate = nil
+    }
+
+    private func synchronizeFromElapsedTime() {
+        guard isRunning, let sessionStartDate else { return }
+
+        let elapsed = Int(Date.now.timeIntervalSince(sessionStartDate).rounded(.down))
+        let remaining = max(0, totalSeconds - elapsed)
+
+        if remaining == 0 {
+            stopTimer()
+            isPresented = false
+            return
+        }
+
+        secondsRemaining = remaining
     }
 
     private func playBell(chimes: Int) {
