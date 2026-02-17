@@ -13,18 +13,30 @@ struct SegmentCardView: View {
     let endTime: Date
     let theme: Theme
     let bell: Bell
+    let use24HourClock: Bool
     let useTheme: Bool
     let highlighted: Bool
-    @AppStorage("use24HourClock") private var use24HourClock = false
+    private let timeRangeText: String
 
-    init(segment: Day.Segment, startTime: Date, endTime: Date, theme: Theme, bell: Bell, useTheme: Bool = false, highlighted: Bool = false) {
+    init(segment: Day.Segment,
+         startTime: Date,
+         endTime: Date,
+         theme: Theme,
+         bell: Bell,
+         use24HourClock: Bool = false,
+         useTheme: Bool = false,
+         highlighted: Bool = false) {
         self.segment = segment
         self.startTime = startTime
         self.endTime = endTime
         self.theme = theme
         self.bell = bell
+        self.use24HourClock = use24HourClock
         self.useTheme = useTheme
         self.highlighted = highlighted
+        let start = TimeFormatting.formattedTime(from: startTime, use24HourClock: use24HourClock)
+        let end = TimeFormatting.formattedTime(from: endTime, use24HourClock: use24HourClock)
+        self.timeRangeText = "\(start) – \(end)"
     }
 
     var body: some View {
@@ -62,12 +74,6 @@ struct SegmentCardView: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilitySummary)
-    }
-
-    private var timeRangeText: String {
-        let start = TimeFormatting.formattedTime(from: startTime, use24HourClock: use24HourClock)
-        let end = TimeFormatting.formattedTime(from: endTime, use24HourClock: use24HourClock)
-        return "\(start) – \(end)"
     }
 
     private var timeColumn: some View {
@@ -109,7 +115,7 @@ struct SegmentCardView_Previews: PreviewProvider {
     static var segment = Day.Segment(name: "Sit", duration: TimeInterval(45 * 60))
     static var bell = Bell.singleBell
     static var previews: some View {
-        SegmentCardView(segment: segment, startTime: Date(), endTime: Date().addingTimeInterval(segment.duration), theme: .sky, bell: bell)
+        SegmentCardView(segment: segment, startTime: Date(), endTime: Date().addingTimeInterval(segment.duration), theme: .sky, bell: bell, use24HourClock: false)
             .previewLayout(.fixed(width: 400, height: 60))
     }
 }

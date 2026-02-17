@@ -11,16 +11,6 @@ struct SegmentProgressView: View {
     let timeElapsed: TimeInterval
     let timeRemaining: TimeInterval
     let theme: Theme
-    var formatter = DateComponentsFormatter()
-
-    init(timeElapsed: TimeInterval, timeRemaining: TimeInterval, theme: Theme) {
-        self.timeElapsed = timeElapsed
-        self.timeRemaining = timeRemaining
-        self.theme = theme
-
-        formatter.allowedUnits = [.hour, .minute, .second]
-        formatter.zeroFormattingBehavior = .pad
-    }
 
     private var progress: Double {
         guard timeElapsed + timeRemaining > 0 else { return 1 }
@@ -30,19 +20,35 @@ struct SegmentProgressView: View {
     var body: some View {
         VStack {
             ProgressView(value: progress)
-                .progressViewStyle(SegmentProgressViewStyle(theme: theme))
+                .progressViewStyle(.linear)
+                .tint(theme.mainColor)
+                .padding(4)
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(theme.accentColor.opacity(0.35))
+                )
+                .transaction { transaction in
+                    transaction.animation = nil
+                }
             HStack {
                 VStack(alignment: .leading) {
                     Text("Elapsed")
                         .font(.caption)
-                    Label("\(safeString(for: timeElapsed))", systemImage: "hourglass.bottomhalf.fill")
+                    HStack(spacing: 4) {
+                        Image(systemName: "hourglass.bottomhalf.fill")
+                        Text(safeString(for: timeElapsed))
+                            .monospacedDigit()
+                    }
                 }
                 Spacer()
                 VStack(alignment: .trailing) {
                     Text("Remaining")
                         .font(.caption)
-                    Label("\(safeString(for: timeRemaining))", systemImage: "hourglass.tophalf.fill")
-                        .labelStyle(.trailingIcon)
+                    HStack(spacing: 4) {
+                        Text(safeString(for: timeRemaining))
+                            .monospacedDigit()
+                        Image(systemName: "hourglass.tophalf.fill")
+                    }
                 }
             }
         }
@@ -53,7 +59,7 @@ struct SegmentProgressView: View {
     }
 
     private func safeString(for interval: TimeInterval) -> String {
-        formatter.string(from: max(0, interval)) ?? "--:--"
+        TimeFormatting.formattedDuration(from: interval)
     }
 }
 

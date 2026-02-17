@@ -83,6 +83,7 @@ struct NewDaySheet: View {
                             endTime: schedule?.1 ?? newDay.startTimeAsDate,
                             theme: newDay.theme,
                             bell: segment.resolvedEndBell(defaultBell: newDay.defaultBell),
+                            use24HourClock: use24HourClock,
                             useTheme: isExpanded,
                             highlighted: isExpanded
                         )

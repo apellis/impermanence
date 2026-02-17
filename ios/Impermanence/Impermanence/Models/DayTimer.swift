@@ -32,8 +32,9 @@ final class DayTimer: ObservableObject {
 
     var segmentChangedAction: ((Bell?) -> Void)?
 
-    private weak var timer: Timer?
-    private var frequency: TimeInterval { 1.0 / 60.0 }
+    private var timer: Timer?
+    private var frequency: TimeInterval { 1.0 }
+    private static weak var activeOwner: DayTimer?
 
     var segmentText: String {
         switch segmentIndex {
@@ -86,36 +87,54 @@ final class DayTimer: ObservableObject {
         updateActiveTimes(for: segmentIndex, now: currentDate)
     }
 
+    deinit {
+        timer?.invalidate()
+    }
+
     func startDay() {
+        if let owner = Self.activeOwner, owner !== self {
+            owner.stopDay()
+        }
+        guard timer == nil else { return }
+        Self.activeOwner = self
         refresh()
         timer = Timer.scheduledTimer(withTimeInterval: frequency, repeats: true) { [weak self] _ in
             guard let self else { return }
-            Task { @MainActor in
+            MainActor.assumeIsolated {
                 self.refresh()
             }
         }
-        timer?.tolerance = 0.1
+        timer?.tolerance = 0.2
     }
 
     func stopDay() {
         timer?.invalidate()
         timer = nil
+        if Self.activeOwner === self {
+            Self.activeOwner = nil
+        }
     }
 
     func refresh(now: Date = Date.now) {
         if loopDays && !Calendar.current.isDate(now, equalTo: startTime, toGranularity: .day) {
-            rollForwardOneDay(now: now)
+            alignToCurrentDay(now: now)
         }
         updateSegments(now: now)
         freshTimer = false
     }
 
-    private func rollForwardOneDay(now: Date) {
-        guard let newStart = Calendar.current.date(byAdding: .day, value: 1, to: startTime) else { return }
+    private func alignToCurrentDay(now: Date) {
+        let calendar = Calendar.current
+        let startDay = calendar.startOfDay(for: startTime)
+        let nowDay = calendar.startOfDay(for: now)
+        guard let dayShift = calendar.dateComponents([.day], from: startDay, to: nowDay).day,
+              dayShift != 0 else { return }
+
+        guard let newStart = calendar.date(byAdding: .day, value: dayShift, to: startTime) else { return }
         startTime = newStart
         for index in segments.indices {
-            if let newSegmentStart = Calendar.current.date(byAdding: .day, value: 1, to: segments[index].startTime),
-               let newSegmentEnd = Calendar.current.date(byAdding: .day, value: 1, to: segments[index].endTime) {
+            if let newSegmentStart = calendar.date(byAdding: .day, value: dayShift, to: segments[index].startTime),
+               let newSegmentEnd = calendar.date(byAdding: .day, value: dayShift, to: segments[index].endTime) {
                 segments[index].startTime = newSegmentStart
                 segments[index].endTime = newSegmentEnd
                 segments[index].rang = false
@@ -160,20 +179,33 @@ final class DayTimer: ObservableObject {
         if index > 0 && index - 1 < segments.count {
             segments[index - 1].rang = true
         }
-        withAnimation(.easeInOut(duration: 0.25)) {
-            segmentIndex = index
-            activeSegmentName = segmentText
-        }
+        segmentIndex = index
+        activeSegmentName = segmentText
         updateActiveTimes(for: index, now: now)
     }
 
     private func updateActiveTimes(for index: Int, now: Date) {
         if index >= 0 && index < segments.count {
-            activeSegmentTimeElapsed = now.timeIntervalSinceReferenceDate - segments[index].startTime.timeIntervalSinceReferenceDate
-            activeSegmentTimeRemaining = segments[index].endTime.timeIntervalSince(now)
+            let elapsed = now.timeIntervalSinceReferenceDate - segments[index].startTime.timeIntervalSinceReferenceDate
+            let remaining = segments[index].endTime.timeIntervalSince(now)
+
+            // Avoid publishing every timer tick when displayed whole-second values have not changed.
+            let elapsedSeconds = max(0, Int(elapsed.rounded(.down)))
+            let remainingSeconds = max(0, Int(remaining.rounded(.down)))
+
+            if Int(activeSegmentTimeElapsed.rounded(.down)) != elapsedSeconds {
+                activeSegmentTimeElapsed = TimeInterval(elapsedSeconds)
+            }
+            if Int(activeSegmentTimeRemaining.rounded(.down)) != remainingSeconds {
+                activeSegmentTimeRemaining = TimeInterval(remainingSeconds)
+            }
         } else {
-            activeSegmentTimeElapsed = -1
-            activeSegmentTimeRemaining = -1
+            if activeSegmentTimeElapsed != -1 {
+                activeSegmentTimeElapsed = -1
+            }
+            if activeSegmentTimeRemaining != -1 {
+                activeSegmentTimeRemaining = -1
+            }
         }
     }
 

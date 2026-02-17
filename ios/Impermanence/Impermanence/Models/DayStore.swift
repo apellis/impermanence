@@ -142,9 +142,3 @@ enum PortableDayPlanCodec {
         return mod < 0 ? mod + secondsPerDay : mod
     }
 }
-
-private extension Bell {
-    func sanitized() -> Bell {
-        Bell(soundId: soundId, numRings: max(1, numRings))
-    }
-}

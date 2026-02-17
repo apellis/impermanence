@@ -161,4 +161,67 @@ final class ImpermanenceTests: XCTestCase {
         XCTAssertEqual(day.defaultBell.numRings, 1)
         XCTAssertEqual(day.segments[0].customEndBell?.numRings, 1)
     }
+
+    func testNativeDecodeSanitizesBellValuesAndStartTime() throws {
+        let json = """
+        [
+          {
+            "id": "6A9805A9-C40B-440C-8A62-C843C8A8D603",
+            "name": "Corrupt Day",
+            "startTime": 987654321,
+            "segments": [
+              {
+                "id": "B845B10B-5BA4-4A5A-B4C8-8FEC4E2512A6",
+                "name": "Sit",
+                "duration": 0,
+                "endBell": { "soundId": 99, "numRings": 9999 }
+              }
+            ],
+            "startBell": { "soundId": 99, "numRings": 9999 },
+            "manualBell": { "soundId": 99, "numRings": -4 },
+            "defaultBell": { "soundId": 99, "numRings": 99 },
+            "theme": "orange"
+          }
+        ]
+        """.data(using: .utf8)!
+
+        let decoded = try JSONDecoder().decode([Day].self, from: json)
+        let day = try XCTUnwrap(decoded.first)
+
+        XCTAssertGreaterThanOrEqual(day.startTime, 0)
+        XCTAssertLessThan(day.startTime, 86_400)
+        XCTAssertEqual(day.startBell.soundId, Bell.singleBell.soundId)
+        XCTAssertEqual(day.defaultBell.soundId, Bell.singleBell.soundId)
+        XCTAssertEqual(day.manualBell.soundId, Bell.singleBell.soundId)
+        XCTAssertEqual(day.startBell.numRings, Bell.maxRings)
+        XCTAssertEqual(day.defaultBell.numRings, Bell.maxRings)
+        XCTAssertEqual(day.manualBell.numRings, Bell.minRings)
+        XCTAssertEqual(day.segments.first?.duration, 1)
+        XCTAssertEqual(day.segments.first?.customEndBell?.numRings, Bell.maxRings)
+    }
+
+    func testBellSanitizationClampsUnsafeValues() {
+        let unsafeBell = Bell(soundId: 77, numRings: 50_000).sanitized()
+        XCTAssertEqual(unsafeBell.soundId, Bell.singleBell.soundId)
+        XCTAssertEqual(unsafeBell.numRings, Bell.maxRings)
+    }
+
+    @MainActor
+    func testDayTimerAlignsDriftedScheduleToCurrentDayInOneRefresh() throws {
+        let segment = Day.Segment(name: "Sit", duration: 60)
+        let referenceDate = Date(timeIntervalSinceReferenceDate: 10_000)
+        let timer = DayTimer(
+            startTime: 0,
+            segments: [segment],
+            startBell: .singleBell,
+            defaultBell: .singleBell,
+            loopDays: true,
+            currentDate: referenceDate
+        )
+
+        let fortyDaysLater = try XCTUnwrap(Calendar.current.date(byAdding: .day, value: 40, to: referenceDate))
+        timer.refresh(now: fortyDaysLater)
+
+        XCTAssertTrue(Calendar.current.isDate(timer.startTime, equalTo: fortyDaysLater, toGranularity: .day))
+    }
 }

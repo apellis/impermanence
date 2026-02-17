@@ -19,11 +19,12 @@ final class BellPlayer: NSObject, AVAudioPlayerDelegate {
     }
 
     func play(bell: Bell) {
-        let rings = max(bell.numRings, 1)
+        let sanitizedBell = bell.sanitized()
+        let rings = sanitizedBell.numRings
         for index in 0..<rings {
             let delay = TimeInterval(index) * 3.0
             schedulingQueue.asyncAfter(deadline: .now() + delay) { [weak self] in
-                self?.playSingleBell(bell)
+                self?.playSingleBell(sanitizedBell)
             }
         }
     }

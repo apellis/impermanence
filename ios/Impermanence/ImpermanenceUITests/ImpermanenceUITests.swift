@@ -28,6 +28,25 @@ final class ImpermanenceUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Ring now"].waitForExistence(timeout: 2))
     }
 
+    func testStartDayFlowWithPersistedDaysStaysResponsive() throws {
+        let app = XCUIApplication()
+        app.launch()
+        openSeedDay(in: app)
+
+        let startButton = app.buttons["Start or Resume Day"]
+        XCTAssertTrue(startButton.waitForExistence(timeout: 5))
+        startButton.tap()
+
+        let manualBellButton = app.navigationBars.buttons["Manual bell controls"]
+        XCTAssertTrue(manualBellButton.waitForExistence(timeout: 8))
+
+        Thread.sleep(forTimeInterval: 2)
+        XCTAssertTrue(manualBellButton.isHittable)
+
+        manualBellButton.tap()
+        XCTAssertTrue(app.buttons["Ring now"].waitForExistence(timeout: 2))
+    }
+
     func testNewDayDefaultsAndControlsAreVisible() throws {
         let app = launchApp()
         let newDayButton = app.buttons["New Day"]

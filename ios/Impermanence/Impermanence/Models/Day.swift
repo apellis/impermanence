@@ -8,6 +8,8 @@
 import Foundation
 
 struct Day: Identifiable, Codable {
+    private static let secondsPerDay = 24 * 60 * 60
+
     let id: UUID
     var name: String
     var startTime: TimeInterval
@@ -22,7 +24,7 @@ struct Day: Identifiable, Codable {
             Calendar.current.startOfDay(for: Date.now).addingTimeInterval(self.startTime)
         }
         set {
-            self.startTime = newValue.timeIntervalSince(Calendar.current.startOfDay(for: Date.now))
+            self.startTime = Self.normalizedStartTime(newValue.timeIntervalSince(Calendar.current.startOfDay(for: Date.now)))
         }
     }
 
@@ -48,11 +50,11 @@ struct Day: Identifiable, Codable {
     init(id: UUID = UUID(), name: String, startTime: TimeInterval, segments: [Segment], startBell: Bell = Bell.singleBell, manualBell: Bell? = nil, defaultBell: Bell = Bell.singleBell, theme: Theme = Theme.bubblegum) {
         self.id = id
         self.name = name
-        self.startTime = startTime
+        self.startTime = Self.normalizedStartTime(startTime)
         self.segments = segments
-        self.startBell = startBell
-        self.defaultBell = defaultBell
-        self.manualBell = manualBell ?? defaultBell
+        self.startBell = startBell.sanitized()
+        self.defaultBell = defaultBell.sanitized()
+        self.manualBell = (manualBell ?? defaultBell).sanitized()
         self.theme = theme
     }
 
@@ -71,13 +73,13 @@ struct Day: Identifiable, Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
         name = try container.decode(String.self, forKey: .name)
-        startTime = try container.decode(TimeInterval.self, forKey: .startTime)
+        startTime = Self.normalizedStartTime(try container.decode(TimeInterval.self, forKey: .startTime))
         segments = try container.decode([Segment].self, forKey: .segments)
         theme = try container.decode(Theme.self, forKey: .theme)
 
-        let decodedDefault = try container.decodeIfPresent(Bell.self, forKey: .defaultBell)
-        let decodedManual = try container.decodeIfPresent(Bell.self, forKey: .manualBell)
-        let decodedStart = try container.decodeIfPresent(Bell.self, forKey: .startBell)
+        let decodedDefault = try container.decodeIfPresent(Bell.self, forKey: .defaultBell)?.sanitized()
+        let decodedManual = try container.decodeIfPresent(Bell.self, forKey: .manualBell)?.sanitized()
+        let decodedStart = try container.decodeIfPresent(Bell.self, forKey: .startBell)?.sanitized()
 
         defaultBell = decodedDefault ?? decodedManual ?? decodedStart ?? .singleBell
         startBell = decodedStart ?? defaultBell
@@ -88,12 +90,20 @@ struct Day: Identifiable, Codable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(id, forKey: .id)
         try container.encode(name, forKey: .name)
-        try container.encode(startTime, forKey: .startTime)
+        try container.encode(Self.normalizedStartTime(startTime), forKey: .startTime)
         try container.encode(segments, forKey: .segments)
-        try container.encode(startBell, forKey: .startBell)
-        try container.encode(manualBell, forKey: .manualBell)
-        try container.encode(defaultBell, forKey: .defaultBell)
+        try container.encode(startBell.sanitized(), forKey: .startBell)
+        try container.encode(manualBell.sanitized(), forKey: .manualBell)
+        try container.encode(defaultBell.sanitized(), forKey: .defaultBell)
         try container.encode(theme, forKey: .theme)
+    }
+
+    private static func normalizedStartTime(_ value: TimeInterval) -> TimeInterval {
+        guard value.isFinite else { return 0 }
+        let seconds = Int(value.rounded())
+        let mod = seconds % secondsPerDay
+        let wrapped = mod < 0 ? mod + secondsPerDay : mod
+        return TimeInterval(wrapped)
     }
 
     var currentSegmentAndTimeRemaining: (Segment, TimeInterval)? {
@@ -154,8 +164,9 @@ extension Day {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
-            duration = try container.decode(TimeInterval.self, forKey: .duration)
-            endBellStorage = try container.decodeIfPresent(Bell.self, forKey: .endBell)
+            let decodedDuration = try container.decode(TimeInterval.self, forKey: .duration)
+            duration = max(1, decodedDuration)
+            endBellStorage = try container.decodeIfPresent(Bell.self, forKey: .endBell)?.sanitized()
         }
 
         func encode(to encoder: Encoder) throws {
