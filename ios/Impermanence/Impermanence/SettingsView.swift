@@ -34,6 +34,7 @@ struct SettingsView: View {
 
     @AppStorage("use24HourClock") private var use24HourClock = false
     @AppStorage("loopDays") private var loopDays = true
+    @AppStorage("keepScreenAwakeDuringActiveDay") private var keepScreenAwakeDuringActiveDay = true
     @State private var isPresentingImporter = false
     @State private var isPresentingExporter = false
     @State private var transferMessage: String?
@@ -48,6 +49,9 @@ struct SettingsView: View {
                     }
                     Toggle(isOn: $loopDays) {
                         Text("Loop days at midnight")
+                    }
+                    Toggle(isOn: $keepScreenAwakeDuringActiveDay) {
+                        Text("Keep screen awake during active day")
                     }
                 }
                 Section {

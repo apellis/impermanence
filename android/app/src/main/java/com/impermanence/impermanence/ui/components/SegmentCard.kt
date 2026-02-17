@@ -1,6 +1,5 @@
 package com.impermanence.impermanence.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,12 +17,14 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.impermanence.impermanence.model.Bell
 import com.impermanence.impermanence.model.Day
 import com.impermanence.impermanence.model.Theme
+import com.impermanence.impermanence.ui.theme.AppUiTokens
 import com.impermanence.impermanence.util.TimeFormatting
 
 @Composable
@@ -48,22 +49,38 @@ fun SegmentCard(
     }
 
     Surface(
-        modifier = modifier,
+        modifier = modifier.semantics {
+            val range = timeRange(startTimeSeconds, endTimeSeconds, use24HourClock)
+            val activeStatus = if (highlighted) "Now." else ""
+            contentDescription = "$activeStatus ${segment.name.ifBlank { "Untitled segment" }}. $range. ${bell.numRings} chimes."
+        },
         tonalElevation = if (highlighted) 4.dp else 1.dp,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(AppUiTokens.CardCorner),
         color = containerColor
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(AppUiTokens.CardPadding)
         ) {
-            Text(
-                text = segment.name.ifBlank { "Untitled segment" },
-                style = MaterialTheme.typography.titleMedium,
-                color = contentColor
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = segment.name.ifBlank { "Untitled segment" },
+                    style = MaterialTheme.typography.titleMedium,
+                    color = contentColor
+                )
+                if (highlighted) {
+                    Text(
+                        text = "Now",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = contentColor
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(AppUiTokens.ItemSpacing))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(modifier = Modifier.weight(1f)) {
                     androidx.compose.material3.Icon(

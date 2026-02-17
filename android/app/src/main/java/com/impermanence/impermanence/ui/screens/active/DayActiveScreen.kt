@@ -21,6 +21,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -39,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.impermanence.impermanence.R
@@ -48,14 +50,17 @@ import com.impermanence.impermanence.model.BellCatalog
 import com.impermanence.impermanence.model.Day
 import com.impermanence.impermanence.domain.timer.DayTimerEngine
 import com.impermanence.impermanence.ui.components.SegmentCard
+import com.impermanence.impermanence.ui.theme.AppUiTokens
 import com.impermanence.impermanence.ui.viewmodel.DayActiveViewModel
 import com.impermanence.impermanence.util.KeepScreenOn
+import com.impermanence.impermanence.util.TimeFormatting
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DayActiveScreen(
     day: Day,
     loopDays: Boolean,
+    keepScreenAwakeDuringDay: Boolean,
     use24HourClock: Boolean,
     onExit: () -> Unit,
     onManualBellChange: (Day) -> Unit = {}
@@ -78,7 +83,9 @@ fun DayActiveScreen(
         viewModel.updateLoopDays(loopDays)
     }
 
-    KeepScreenOn(active = timerState.status == DayTimerEngine.TimerStatus.ACTIVE)
+    val activeSession = timerState.status != DayTimerEngine.TimerStatus.COMPLETE &&
+        timerState.status != DayTimerEngine.TimerStatus.EMPTY
+    KeepScreenOn(active = keepScreenAwakeDuringDay && activeSession)
 
     Scaffold(
         containerColor = day.theme.mainColor,
@@ -171,18 +178,27 @@ fun DayActiveScreen(
         }
     ) { padding ->
         val displayDay = day.copy(manualBell = manualBell)
+        val schedule = displayDay.segmentSchedule()
+        val nextBellSeconds = when (timerState.status) {
+            DayTimerEngine.TimerStatus.NOT_STARTED -> schedule.firstOrNull()?.first
+            DayTimerEngine.TimerStatus.ACTIVE -> schedule.getOrNull(timerState.segmentIndex)?.second
+            else -> null
+        }
+        val nextBellText = nextBellSeconds?.let { TimeFormatting.formattedTimeFromSeconds(it, use24HourClock) }
         LazyColumn(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            contentPadding = PaddingValues(AppUiTokens.ScreenPadding),
+            verticalArrangement = Arrangement.spacedBy(AppUiTokens.SectionSpacing)
         ) {
             item {
-                Text(
-                    timerState.activeSegmentName,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = day.theme.accentColor
+                ActiveDaySummaryCard(
+                    activeSegmentName = timerState.activeSegmentName,
+                    status = timerState.status,
+                    activeSegmentTimeRemaining = timerState.activeSegmentTimeRemaining,
+                    nextBellText = nextBellText,
+                    accentColor = day.theme.accentColor
                 )
             }
 
@@ -196,18 +212,80 @@ fun DayActiveScreen(
                 }
             }
 
+            item {
+                Text(
+                    text = "Schedule",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = day.theme.accentColor
+                )
+            }
+
             itemsIndexed(displayDay.segments, key = { _, segment -> segment.id }) { index, segment ->
-                val schedule = displayDay.segmentSchedule().getOrNull(index) ?: (0 to 0)
+                val segmentSchedule = schedule.getOrNull(index) ?: (0 to 0)
                 SegmentCard(
                     segment = segment,
-                    startTimeSeconds = schedule.first,
-                    endTimeSeconds = schedule.second,
+                    startTimeSeconds = segmentSchedule.first,
+                    endTimeSeconds = segmentSchedule.second,
                     bell = segment.resolvedBell(displayDay.defaultBell),
                     theme = displayDay.theme,
                     use24HourClock = use24HourClock,
                     useTheme = true,
                     highlighted = index == timerState.segmentIndex,
                     modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActiveDaySummaryCard(
+    activeSegmentName: String,
+    status: DayTimerEngine.TimerStatus,
+    activeSegmentTimeRemaining: Long,
+    nextBellText: String?,
+    accentColor: Color
+) {
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        color = accentColor.copy(alpha = 0.14f),
+        tonalElevation = 0.dp,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(AppUiTokens.CardPadding),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = when (status) {
+                    DayTimerEngine.TimerStatus.ACTIVE -> "Now"
+                    DayTimerEngine.TimerStatus.NOT_STARTED -> "Day queued"
+                    DayTimerEngine.TimerStatus.COMPLETE -> "Complete"
+                    DayTimerEngine.TimerStatus.EMPTY -> "Empty"
+                },
+                style = MaterialTheme.typography.labelLarge,
+                color = accentColor
+            )
+            Text(
+                text = activeSegmentName,
+                style = MaterialTheme.typography.headlineSmall,
+                color = accentColor
+            )
+            if (status == DayTimerEngine.TimerStatus.ACTIVE && activeSegmentTimeRemaining >= 0) {
+                Text(
+                    text = "Remaining ${formatDuration(activeSegmentTimeRemaining)}",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = accentColor
+                )
+            }
+            if (nextBellText != null) {
+                Text(
+                    text = "Next bell at $nextBellText",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = accentColor
                 )
             }
         }
@@ -235,7 +313,9 @@ private fun SegmentProgress(
             trackColor = accentColor.copy(alpha = 0.24f)
         )
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 6.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(

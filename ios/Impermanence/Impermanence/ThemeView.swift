@@ -7,6 +7,14 @@
 
 import SwiftUI
 
+enum UIStyle {
+    static let screenPadding: CGFloat = 16
+    static let cardPadding: CGFloat = 14
+    static let cardCorner: CGFloat = 12
+    static let sectionSpacing: CGFloat = 14
+    static let timelineRailWidth: CGFloat = 2
+}
+
 struct ThemeView: View {
     let theme: Theme
 

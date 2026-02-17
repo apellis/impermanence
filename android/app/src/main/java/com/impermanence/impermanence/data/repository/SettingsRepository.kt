@@ -14,9 +14,11 @@ class SettingsRepository(
 ) {
     private val use24HourClockKey = booleanPreferencesKey("use24HourClock")
     private val loopDaysKey = booleanPreferencesKey("loopDays")
+    private val keepScreenAwakeDuringDayKey = booleanPreferencesKey("keepScreenAwakeDuringDay")
 
     val use24HourClock: Flow<Boolean> = dataStore.booleanFlow(use24HourClockKey, defaultValue = false)
     val loopDays: Flow<Boolean> = dataStore.booleanFlow(loopDaysKey, defaultValue = true)
+    val keepScreenAwakeDuringDay: Flow<Boolean> = dataStore.booleanFlow(keepScreenAwakeDuringDayKey, defaultValue = true)
 
     suspend fun setUse24HourClock(enabled: Boolean) {
         dataStore.edit { prefs -> prefs[use24HourClockKey] = enabled }
@@ -24,6 +26,10 @@ class SettingsRepository(
 
     suspend fun setLoopDays(enabled: Boolean) {
         dataStore.edit { prefs -> prefs[loopDaysKey] = enabled }
+    }
+
+    suspend fun setKeepScreenAwakeDuringDay(enabled: Boolean) {
+        dataStore.edit { prefs -> prefs[keepScreenAwakeDuringDayKey] = enabled }
     }
 
     private fun DataStore<Preferences>.booleanFlow(key: androidx.datastore.preferences.core.Preferences.Key<Boolean>, defaultValue: Boolean): Flow<Boolean> {

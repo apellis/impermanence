@@ -16,6 +16,7 @@ data class AppUiState(
     val days: List<Day> = emptyList(),
     val use24HourClock: Boolean = false,
     val loopDays: Boolean = true,
+    val keepScreenAwakeDuringDay: Boolean = true,
     val isLoading: Boolean = true,
     val errorMessage: String? = null
 )
@@ -33,12 +34,14 @@ class AppViewModel(
             combine(
                 dayRepository.days,
                 settingsRepository.use24HourClock,
-                settingsRepository.loopDays
-            ) { days, use24, loop ->
+                settingsRepository.loopDays,
+                settingsRepository.keepScreenAwakeDuringDay
+            ) { days, use24, loop, keepAwake ->
                 AppUiState(
                     days = days,
                     use24HourClock = use24,
                     loopDays = loop,
+                    keepScreenAwakeDuringDay = keepAwake,
                     isLoading = false
                 )
             }.collect { state ->
@@ -86,6 +89,12 @@ class AppViewModel(
     fun setLoopDays(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setLoopDays(enabled)
+        }
+    }
+
+    fun setKeepScreenAwakeDuringDay(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setKeepScreenAwakeDuringDay(enabled)
         }
     }
 

@@ -28,27 +28,40 @@ struct SegmentCardView: View {
     }
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
-            Text(segment.name)
-                .font(.headline)
-                .accessibilityAddTraits(.isHeader)
-                .frame(maxWidth: .infinity, alignment: .leading)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Text(segment.name.isEmpty ? "Untitled segment" : segment.name)
+                    .font(.headline)
+                    .accessibilityAddTraits(.isHeader)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
-            timeColumn
-                .frame(maxWidth: .infinity, alignment: .leading)
+                if highlighted {
+                    Text("Now")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                }
+            }
 
-            bellColumn
-                .frame(maxWidth: .infinity, alignment: .trailing)
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                timeColumn
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                bellColumn
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
         }
-        .padding()
+        .padding(UIStyle.cardPadding)
         .if(self.useTheme) { $0.background(theme.mainColor) }
         .if(self.useTheme) { $0.foregroundColor(theme.accentColor) }
+        .clipShape(RoundedRectangle(cornerRadius: UIStyle.cardCorner))
         .if(self.useTheme && self.highlighted) {
             $0.overlay(
-                RoundedRectangle(cornerRadius: 10)
+                RoundedRectangle(cornerRadius: UIStyle.cardCorner)
                     .strokeBorder(theme.accentColor, lineWidth: 1)
             )
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilitySummary)
     }
 
     private var timeRangeText: String {
@@ -64,8 +77,6 @@ struct SegmentCardView: View {
                 .font(.caption)
                 .monospacedDigit()
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("duration \(segment.duration)")
     }
 
     private var bellColumn: some View {
@@ -74,8 +85,12 @@ struct SegmentCardView: View {
                 .font(.caption)
             Image(systemName: "bell")
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("bell rings \(bell.numRings)")
+    }
+
+    private var accessibilitySummary: String {
+        let active = highlighted ? "Now. " : ""
+        let segmentName = segment.name.isEmpty ? "Untitled segment" : segment.name
+        return "\(active)\(segmentName). \(timeRangeText). \(bell.numRings) chimes."
     }
 }
 

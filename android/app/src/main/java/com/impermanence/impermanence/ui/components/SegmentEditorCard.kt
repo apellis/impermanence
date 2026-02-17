@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
@@ -32,10 +33,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.impermanence.impermanence.model.Bell
 import com.impermanence.impermanence.model.Day
+import com.impermanence.impermanence.ui.theme.AppUiTokens
 import com.impermanence.impermanence.util.TimeFormatting
 
 @Composable
@@ -58,34 +60,31 @@ fun SegmentEditorCard(
 
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(AppUiTokens.CardCorner),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(AppUiTokens.CardPadding),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.End,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(text = "Segment ${position + 1}", fontWeight = FontWeight.SemiBold)
-                Row {
-                    IconButton(onClick = onMoveUp, enabled = position > 0) {
-                        Icon(imageVector = Icons.Default.ArrowUpward, contentDescription = "Move up")
-                    }
-                    IconButton(onClick = onMoveDown, enabled = position < total - 1) {
-                        Icon(imageVector = Icons.Default.ArrowDownward, contentDescription = "Move down")
-                    }
-                    IconButton(onClick = onDuplicate) {
-                        Icon(imageVector = Icons.Default.ContentCopy, contentDescription = "Duplicate")
-                    }
-                    IconButton(onClick = onDelete) {
-                        Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete")
-                    }
+                IconButton(onClick = onMoveUp, enabled = position > 0) {
+                    Icon(imageVector = Icons.Default.ArrowUpward, contentDescription = "Move up")
+                }
+                IconButton(onClick = onMoveDown, enabled = position < total - 1) {
+                    Icon(imageVector = Icons.Default.ArrowDownward, contentDescription = "Move down")
+                }
+                IconButton(onClick = onDuplicate) {
+                    Icon(imageVector = Icons.Default.ContentCopy, contentDescription = "Duplicate")
+                }
+                IconButton(onClick = onDelete) {
+                    Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete")
                 }
             }
 
@@ -152,8 +151,26 @@ private fun DurationControl(
     durationMinutes: Int,
     onDurationChanged: (Int) -> Unit
 ) {
+    val durationText = durationMinutes.toString()
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("Duration: ${TimeFormatting.formattedDurationMinutes(durationMinutes)}")
+        Text("Duration")
+        OutlinedTextField(
+            value = durationText,
+            onValueChange = { newValue ->
+                val digits = newValue.filter { it.isDigit() }
+                if (digits.isEmpty()) return@OutlinedTextField
+                onDurationChanged(digits.toIntOrNull() ?: durationMinutes)
+            },
+            modifier = Modifier.width(140.dp),
+            label = { Text("Minutes") },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+        )
+        Text(
+            text = TimeFormatting.formattedDurationMinutes(durationMinutes),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { onDurationChanged(durationMinutes - 1) }) {
                 Icon(imageVector = Icons.Default.Remove, contentDescription = "Minus one minute")

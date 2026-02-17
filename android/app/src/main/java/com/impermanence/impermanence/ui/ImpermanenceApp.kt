@@ -151,6 +151,7 @@ fun ImpermanenceApp(appContainer: AppContainer) {
                         DayActiveScreen(
                             day = day,
                             loopDays = uiState.loopDays,
+                            keepScreenAwakeDuringDay = uiState.keepScreenAwakeDuringDay,
                             use24HourClock = uiState.use24HourClock,
                             onExit = { navController.popBackStack() },
                             onManualBellChange = appViewModel::updateDay
@@ -196,8 +197,10 @@ fun ImpermanenceApp(appContainer: AppContainer) {
                     SettingsScreen(
                         use24HourClock = uiState.use24HourClock,
                         loopDays = uiState.loopDays,
+                        keepScreenAwakeDuringDay = uiState.keepScreenAwakeDuringDay,
                         onUse24HourClockChanged = appViewModel::setUse24HourClock,
                         onLoopDaysChanged = appViewModel::setLoopDays,
+                        onKeepScreenAwakeDuringDayChanged = appViewModel::setKeepScreenAwakeDuringDay,
                         onImportDays = {
                             importLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
                         },

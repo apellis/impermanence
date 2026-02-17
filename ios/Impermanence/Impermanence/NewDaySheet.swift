@@ -70,7 +70,7 @@ struct NewDaySheet: View {
                     .padding(.vertical, 4)
             }
 
-            ForEach(newDay.segments) { segment in
+            ForEach(newDay.segments, id: \.id) { segment in
                 let binding = safeBinding(for: segment.id)
                 let schedule = scheduleMap[segment.id]
                 let isExpanded = expandedSegmentIDs.contains(segment.id)
@@ -94,11 +94,17 @@ struct NewDaySheet: View {
                         Divider().padding(.horizontal)
                         DaySegmentEditorRow(
                             segment: binding,
+                            totalSegments: newDay.segments.count,
                             startTime: schedule?.0 ?? newDay.startTimeAsDate,
                             endTime: schedule?.1 ?? newDay.startTimeAsDate,
                             use24HourClock: use24HourClock,
                             defaultBell: newDay.defaultBell,
-                            onDuplicate: { duplicateSegment(id: segment.id) }
+                            canMoveUp: segment.id != newDay.segments.first?.id,
+                            canMoveDown: segment.id != newDay.segments.last?.id,
+                            onMoveUp: { moveSegment(id: segment.id, offset: -1) },
+                            onMoveDown: { moveSegment(id: segment.id, offset: 1) },
+                            onDuplicate: { duplicateSegment(id: segment.id) },
+                            onDelete: { deleteSegment(id: segment.id) }
                         )
                         .padding(.horizontal)
                         .padding(.bottom, 12)
@@ -159,6 +165,24 @@ struct NewDaySheet: View {
             duplicate.id = UUID()
             newDay.segments.insert(duplicate, at: index + 1)
             expandedSegmentIDs.insert(duplicate.id)
+        }
+    }
+
+    private func moveSegment(id: UUID, offset: Int) {
+        guard let index = newDay.segments.firstIndex(where: { $0.id == id }) else { return }
+        let target = index + offset
+        guard target >= 0 && target < newDay.segments.count else { return }
+        withAnimation(.easeInOut(duration: 0.18)) {
+            let segment = newDay.segments.remove(at: index)
+            newDay.segments.insert(segment, at: target)
+        }
+    }
+
+    private func deleteSegment(id: UUID) {
+        guard let index = newDay.segments.firstIndex(where: { $0.id == id }) else { return }
+        withAnimation {
+            newDay.segments.remove(at: index)
+            expandedSegmentIDs.remove(id)
         }
     }
 

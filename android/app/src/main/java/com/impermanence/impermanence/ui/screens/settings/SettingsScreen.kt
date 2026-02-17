@@ -29,8 +29,10 @@ import com.impermanence.impermanence.R
 fun SettingsScreen(
     use24HourClock: Boolean,
     loopDays: Boolean,
+    keepScreenAwakeDuringDay: Boolean,
     onUse24HourClockChanged: (Boolean) -> Unit,
     onLoopDaysChanged: (Boolean) -> Unit,
+    onKeepScreenAwakeDuringDayChanged: (Boolean) -> Unit,
     onImportDays: () -> Unit,
     onExportDays: () -> Unit,
     onBack: () -> Unit
@@ -66,6 +68,13 @@ fun SettingsScreen(
                 subtitle = stringResource(R.string.setting_loop_days_subtitle),
                 checked = loopDays,
                 onToggle = onLoopDaysChanged
+            )
+            Spacer(modifier = Modifier.padding(vertical = 8.dp))
+            SettingRow(
+                title = stringResource(R.string.setting_keep_screen_awake),
+                subtitle = stringResource(R.string.setting_keep_screen_awake_subtitle),
+                checked = keepScreenAwakeDuringDay,
+                onToggle = onKeepScreenAwakeDuringDayChanged
             )
             Spacer(modifier = Modifier.padding(vertical = 8.dp))
             Text(stringResource(R.string.setting_data), style = MaterialTheme.typography.titleMedium)

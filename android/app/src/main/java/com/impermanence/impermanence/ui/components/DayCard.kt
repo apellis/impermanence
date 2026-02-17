@@ -23,9 +23,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.impermanence.impermanence.model.Day
 import com.impermanence.impermanence.model.Theme
+import com.impermanence.impermanence.ui.theme.AppUiTokens
 import com.impermanence.impermanence.util.TimeFormatting
 
 @Composable
@@ -41,15 +44,17 @@ fun DayCard(
     onDelete: () -> Unit
 ) {
     Card(
-        modifier = modifier,
+        modifier = modifier.semantics {
+            contentDescription = "${day.name}. ${provideTimeRange(day, use24HourClock)}. ${day.segments.size} segments."
+        },
         onClick = onClick,
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(AppUiTokens.CardCorner),
         colors = CardDefaults.cardColors(
             containerColor = themeContainerColor(day.theme),
             contentColor = day.theme.accentColor
         )
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(AppUiTokens.CardPadding)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(text = day.name, style = MaterialTheme.typography.titleMedium)
                 Row {

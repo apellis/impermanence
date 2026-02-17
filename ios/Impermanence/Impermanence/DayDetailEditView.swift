@@ -10,7 +10,6 @@ import SwiftUI
 struct DayDetailEditView: View {
     @Binding var day: Day
     @AppStorage("use24HourClock") private var use24HourClock = false
-    @State private var expandedSegmentIDs: Set<UUID> = []
 
     private var segmentScheduleMap: [UUID: (Date, Date)] {
         Self.segmentSchedules(for: day)
@@ -29,62 +28,45 @@ struct DayDetailEditView: View {
             Section(header:
                 VStack(alignment: .leading) {
                     Text("Segments").fontWeight(.bold)
-                    // TODO add a help button using SF Symbol questionmark.circle with instructions for editing
+                    Text("Timeline style editor with inline controls.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
             ) {
-                ForEach(day.segments) { segment in
+                timelineSummaryRow
+                ForEach(day.segments, id: \.id) { segment in
                     let binding = safeBinding(for: segment.id)
                     let schedule = segmentScheduleMap[segment.id]
-                    let resolvedBell = segment.resolvedEndBell(defaultBell: day.defaultBell)
-
-                    let expanded = expandedSegmentIDs.contains(segment.id)
-
-                    VStack(spacing: 0) {
-                        Button(action: {
-                            toggleExpanded(id: segment.id)
-                        }) {
-                            SegmentCardView(segment: segment,
-                                            startTime: schedule?.0 ?? day.startTimeAsDate,
-                                            endTime: schedule?.1 ?? day.startTimeAsDate,
-                                            theme: day.theme,
-                                            bell: resolvedBell,
-                                            useTheme: expanded,
-                                            highlighted: expanded)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-
-                        if expanded {
-                            Divider()
-                                .padding(.horizontal)
-                            DaySegmentEditorRow(
-                                segment: binding,
-                                startTime: schedule?.0 ?? day.startTimeAsDate,
-                                endTime: schedule?.1 ?? day.startTimeAsDate,
-                                use24HourClock: use24HourClock,
-                                defaultBell: day.defaultBell,
-                                onDuplicate: { duplicateSegment(id: segment.id) }
-                            )
-                            .padding(.horizontal)
-                            .padding(.bottom, 12)
-                        }
+                    HStack(alignment: .top, spacing: 10) {
+                        timelineRail(
+                            start: schedule?.0 ?? day.startTimeAsDate,
+                            end: schedule?.1 ?? day.startTimeAsDate
+                        )
+                        DaySegmentEditorRow(
+                            segment: binding,
+                            totalSegments: day.segments.count,
+                            startTime: schedule?.0 ?? day.startTimeAsDate,
+                            endTime: schedule?.1 ?? day.startTimeAsDate,
+                            use24HourClock: use24HourClock,
+                            defaultBell: day.defaultBell,
+                            canMoveUp: segment.id != day.segments.first?.id,
+                            canMoveDown: segment.id != day.segments.last?.id,
+                            onMoveUp: { moveSegment(id: segment.id, offset: -1) },
+                            onMoveDown: { moveSegment(id: segment.id, offset: 1) },
+                            onDuplicate: { duplicateSegment(id: segment.id) },
+                            onDelete: { deleteSegment(id: segment.id) }
+                        )
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
+                    .padding(12)
                     .background(
-                        RoundedRectangle(cornerRadius: 12)
+                        RoundedRectangle(cornerRadius: UIStyle.cardCorner)
                             .fill(Color(uiColor: .secondarySystemBackground))
                     )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(expanded ? day.theme.mainColor : Color.clear, lineWidth: expanded ? 2 : 0)
-                    )
-                    .padding(.vertical, 4)
+                    .listRowInsets(EdgeInsets(top: 4, leading: UIStyle.screenPadding, bottom: 4, trailing: UIStyle.screenPadding))
                 }
                 .onDelete { indices in
-                    let ids = indices.compactMap { index in
-                        day.segments.indices.contains(index) ? day.segments[index].id : nil
-                    }
                     day.segments.remove(atOffsets: indices)
-                    ids.forEach { expandedSegmentIDs.remove($0) }
                 }
                 .onMove { from, to in
                     day.segments.move(fromOffsets: from, toOffset: to)
@@ -101,13 +83,6 @@ struct DayDetailEditView: View {
             .listRowSeparator(.hidden)
         }
         .scrollContentBackground(.hidden)
-        .onAppear {
-            expandedSegmentIDs = Set(day.segments.map(\.id))
-        }
-        .onChange(of: day.segments.map(\.id)) { ids in
-            let idSet = Set(ids)
-            expandedSegmentIDs = expandedSegmentIDs.intersection(idSet)
-        }
         .onChange(of: day.defaultBell) { newBell in
             day.startBell = newBell
             day.manualBell = newBell
@@ -140,12 +115,43 @@ extension DayDetailEditView {
         min(max(minutes, 1), maxDurationMinutes)
     }
 
-    private func toggleExpanded(id: UUID) {
-        if expandedSegmentIDs.contains(id) {
-            expandedSegmentIDs.remove(id)
-        } else {
-            expandedSegmentIDs.insert(id)
+    @ViewBuilder
+    private var timelineSummaryRow: some View {
+        let start = day.segmentStartEndTimes.first?.0 ?? day.startTimeAsDate
+        let end = day.segmentStartEndTimes.last?.1 ?? day.startTimeAsDate
+        let totalMinutes = max(0, Int((end.timeIntervalSince(start) / 60).rounded()))
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Schedule Timeline")
+                .font(.headline)
+            Text("\(TimeFormatting.formattedTime(from: start, use24HourClock: use24HourClock)) – \(TimeFormatting.formattedTime(from: end, use24HourClock: use24HourClock))")
+                .font(.subheadline)
+            Text("Total duration: \(formattedDuration(totalMinutes))")
+                .font(.caption)
+                .foregroundColor(.secondary)
         }
+        .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
+    private func timelineRail(start: Date, end: Date) -> some View {
+        VStack(spacing: 6) {
+            Text(TimeFormatting.formattedTime(from: start, use24HourClock: use24HourClock))
+                .font(.caption2)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            Spacer()
+                .frame(height: 10)
+            RoundedRectangle(cornerRadius: 1)
+                .fill(Color.secondary.opacity(0.3))
+                .frame(width: UIStyle.timelineRailWidth, height: 62)
+            Text(TimeFormatting.formattedTime(from: end, use24HourClock: use24HourClock))
+                .font(.caption2)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .frame(width: 78)
     }
 
     private func duplicateSegment(id: UUID) {
@@ -153,14 +159,27 @@ extension DayDetailEditView {
         var duplicate = day.segments[index]
         duplicate.id = UUID()
         day.segments.insert(duplicate, at: index + 1)
-        expandedSegmentIDs.insert(duplicate.id)
+    }
+
+    private func deleteSegment(id: UUID) {
+        guard let index = day.segments.firstIndex(where: { $0.id == id }) else { return }
+        day.segments.remove(at: index)
+    }
+
+    private func moveSegment(id: UUID, offset: Int) {
+        guard let index = day.segments.firstIndex(where: { $0.id == id }) else { return }
+        let target = index + offset
+        guard target >= 0 && target < day.segments.count else { return }
+        withAnimation(.easeInOut(duration: 0.18)) {
+            let segment = day.segments.remove(at: index)
+            day.segments.insert(segment, at: target)
+        }
     }
 
     private func addSegment() {
         withAnimation {
             let segment = Day.Segment(name: "", duration: DayDetailEditView.timeInterval(fromMinutes: 15), customEndBell: nil)
             day.segments.append(segment)
-            expandedSegmentIDs.insert(segment.id)
         }
     }
 
@@ -176,20 +195,50 @@ extension DayDetailEditView {
             }
         )
     }
+
+    private func formattedDuration(_ minutes: Int) -> String {
+        let hours = minutes / 60
+        let remaining = minutes % 60
+        switch (hours, remaining) {
+        case (0, let m):
+            return "\(m)m"
+        case (let h, 0):
+            return "\(h)h"
+        default:
+            return "\(hours)h \(remaining)m"
+        }
+    }
 }
 
 struct DaySegmentEditorRow: View {
     @Binding var segment: Day.Segment
+    let totalSegments: Int
     let startTime: Date
     let endTime: Date
     let use24HourClock: Bool
     let defaultBell: Bell
+    let canMoveUp: Bool
+    let canMoveDown: Bool
+    let onMoveUp: () -> Void
+    let onMoveDown: () -> Void
     let onDuplicate: () -> Void
+    let onDelete: () -> Void
 
     private var durationMinutesBinding: Binding<Int> {
         Binding(
             get: { DayDetailEditView.minutes(from: segment.duration) },
             set: { segment.duration = DayDetailEditView.timeInterval(fromMinutes: $0) }
+        )
+    }
+
+    private var durationTextBinding: Binding<String> {
+        Binding(
+            get: { String(durationMinutesBinding.wrappedValue) },
+            set: { newValue in
+                let digits = newValue.filter(\.isNumber)
+                guard let parsed = Int(digits), !digits.isEmpty else { return }
+                durationMinutesBinding.wrappedValue = DayDetailEditView.clampedMinutes(parsed)
+            }
         )
     }
 
@@ -217,24 +266,67 @@ struct DaySegmentEditorRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
-                TextField("Segment name", text: $segment.name)
-                    .font(.headline)
-                    .textInputAutocapitalization(.words)
-                    .disableAutocorrection(false)
-                Spacer(minLength: 8)
-                Label(timeRangeText, systemImage: "clock")
-                    .font(.caption)
-                    .monospacedDigit()
+            HStack(spacing: 6) {
+                Button(action: onMoveUp) {
+                    Image(systemName: "arrow.up")
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .disabled(!canMoveUp)
+                .accessibilityLabel("Move segment up")
+
+                Button(action: onMoveDown) {
+                    Image(systemName: "arrow.down")
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .disabled(!canMoveDown)
+                .accessibilityLabel("Move segment down")
+
+                Button(action: onDuplicate) {
+                    Image(systemName: "square.on.square")
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .accessibilityLabel("Duplicate segment")
+
+                Button(role: .destructive, action: onDelete) {
+                    Image(systemName: "trash")
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .accessibilityLabel("Delete segment")
+                .disabled(totalSegments <= 1)
             }
 
-            Stepper(value: durationMinutesBinding, in: 1...DayDetailEditView.maxDurationMinutes) {
-                Label("Duration: \(formattedDuration(durationMinutesBinding.wrappedValue))", systemImage: "hourglass")
-                    .accessibilityLabel("Segment duration")
-                    .accessibilityValue("\(durationMinutesBinding.wrappedValue) minutes")
-            }
+            TextField("Name", text: $segment.name)
+                .textFieldStyle(.roundedBorder)
+                .textInputAutocapitalization(.words)
+                .disableAutocorrection(false)
 
-            quickAdjustRow
+            Text("Time: \(timeRangeText)")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .monospacedDigit()
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Duration")
+                    .font(.subheadline)
+                HStack(spacing: 8) {
+                    Text("Minutes")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    TextField("Minutes", text: durationTextBinding)
+                        .textFieldStyle(.roundedBorder)
+                        .keyboardType(.numberPad)
+                        .frame(width: 110)
+                    Text(formattedDuration(durationMinutesBinding.wrappedValue))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                }
+                durationAdjustRow
+            }
 
             Toggle("Use day default bell", isOn: usesDefaultBellBinding)
                 .toggleStyle(.switch)
@@ -269,34 +361,46 @@ struct DaySegmentEditorRow: View {
         }
     }
 
-    private var quickAdjustRow: some View {
+    private var durationAdjustRow: some View {
         HStack(spacing: 12) {
+            Button {
+                adjustDuration(by: -1)
+            } label: {
+                Image(systemName: "minus")
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .accessibilityLabel("Subtract one minute")
+
+            Button {
+                adjustDuration(by: 1)
+            } label: {
+                Image(systemName: "plus")
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .accessibilityLabel("Add one minute")
+
             Button {
                 adjustDuration(by: -5)
             } label: {
-                Label("-5 min", systemImage: "minus.circle")
-                    .labelStyle(.titleAndIcon)
+                Text("-5 min")
             }
             .buttonStyle(.bordered)
+            .controlSize(.small)
+            .lineLimit(1)
             .accessibilityLabel("Subtract five minutes")
 
             Button {
                 adjustDuration(by: 5)
             } label: {
-                Label("+5 min", systemImage: "plus.circle")
-                    .labelStyle(.titleAndIcon)
+                Text("+5 min")
             }
             .buttonStyle(.bordered)
+            .controlSize(.small)
+            .lineLimit(1)
             .accessibilityLabel("Add five minutes")
-
             Spacer()
-
-            Button(action: onDuplicate) {
-                Label("Duplicate", systemImage: "square.on.square")
-                    .labelStyle(.titleAndIcon)
-            }
-            .buttonStyle(.bordered)
-            .accessibilityLabel("Duplicate segment")
         }
     }
 

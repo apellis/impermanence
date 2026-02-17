@@ -11,6 +11,8 @@
     <string name="setting_use_24h_subtitle">Match your system preference.</string>
     <string name="setting_loop_days">Loop days at midnight</string>
     <string name="setting_loop_days_subtitle">Automatically restart each day schedule.</string>
+    <string name="setting_keep_screen_awake">Keep screen awake during active day</string>
+    <string name="setting_keep_screen_awake_subtitle">Prevents sleep while a day timer is running.</string>
     <string name="setting_data">Data</string>
     <string name="setting_data_subtitle">Import or export day plans as JSON.</string>
     <string name="import_days">Import Days</string>
