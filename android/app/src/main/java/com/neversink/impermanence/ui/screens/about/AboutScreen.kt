@@ -14,8 +14,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -25,6 +27,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun AboutScreen(onBack: () -> Unit) {
     val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
     val versionName = remember {
         runCatching {
             val pm = context.packageManager
@@ -61,7 +64,11 @@ fun AboutScreen(onBack: () -> Unit) {
             Text("Version $versionName", style = MaterialTheme.typography.bodyMedium)
             Text("For the benefit of all beings ☸️", style = MaterialTheme.typography.bodyMedium)
             Text("© 2026 Alex Ellis", style = MaterialTheme.typography.bodySmall)
-            Text("Contact: apellis@gmail.com", style = MaterialTheme.typography.bodySmall)
+            TextButton(onClick = {
+                uriHandler.openUri("https://github.com/apellis/impermanence/blob/master/PRIVACY.md")
+            }) {
+                Text("Privacy Policy")
+            }
             Text("Future features:", style = MaterialTheme.typography.titleMedium)
             Text("• More bell sound options\n• Multi-day retreat plans", style = MaterialTheme.typography.bodyMedium)
         }

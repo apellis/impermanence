@@ -10,6 +10,7 @@ import SwiftUI
 struct AboutView: View {
     @Binding var isPresentingAboutView: Bool
     let appVersion: String = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "(unknown!)"
+    private let privacyPolicyUrl = URL(string: "https://github.com/apellis/impermanence/blob/master/PRIVACY.md")!
 
     var body: some View {
         NavigationStack {
@@ -21,7 +22,7 @@ struct AboutView: View {
                 }
                 Section("Copyright") {
                     Text("© 2026 Alex Ellis")
-                    Text("Contact: apellis@gmail.com")
+                    Link("Privacy Policy", destination: privacyPolicyUrl)
                 }
                 Section("Future features") {
                     Text("More bell sound options")
