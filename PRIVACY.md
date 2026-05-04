@@ -1,6 +1,6 @@
 # Impermanence app privacy policy
 
-This app does not collect or transmit any user data. It does not use third-party analytics, tracking pixels, or advertising SDKs. The app stores user settings on-device. This data includes but is not limited to: names and durations of user-configured timers and user preferences such as 12- vs. 24-hour time format.
+This app does not collect or transmit any user data. It does not use third-party analytics, tracking pixels, or advertising SDKs. The app stores user settings on-device, and these only remain stored while the app is installed. This data includes but is not limited to: names and durations of user-configured timers and user preferences such as 12- vs. 24-hour time format.
 
 While the app does not collect any data, the operating system (iOS or Android) may collect standard usage telemetry (e.g. crash reports) governed by your own settings with Apple or Google. Impermanence does not access or process this data.
 
