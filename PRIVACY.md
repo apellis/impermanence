@@ -6,4 +6,4 @@ While the app does not collect any data, the operating system (iOS or Android) m
 
 This software is published in the United States. By using it, you agree that it is governed solely by US law. We reject the extraterritorial application of foreign data laws (such as GDPR) because we have rendered them irrelevant through data abstinence.
 
-For questions, file an issue at: [https://github.com/apellis/impermanence/](https://github.com/apellis/impermanence/).
+For questions, file an issue at: [https://github.com/apellis/impermanence/](https://github.com/apellis/impermanence/) or contact (help@neversink.llc)[mailto:help@neversink.llc).
