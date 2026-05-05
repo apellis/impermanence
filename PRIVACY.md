@@ -4,7 +4,7 @@ This policy applies to the Impermanence app, both the iOS App Store and Google P
 
 ## Data collection, retention, and deletion
 
-This app does not collect, store, or transmit any user data off-device. It does not use third-party analytics, tracking pixels, or advertising SDKs. The app stores user settings on-device, and these only remain stored while the app is installed. This data includes names and durations of user-configured timers and user preferences such as 12- vs. 24-hour time format. Users may delete their own data themselves by deleting the app.
+This app does not collect, store, or transmit any user data off-device. It does not use third-party analytics, tracking pixels, or advertising SDKs. The app stores user settings on-device, and these only remain stored while the app is installed. This data includes names and durations of user-configured timers and user preferences such as 12- vs. 24-hour time format. Users may delete their data themselves by deleting the app.
 
 While the app does not collect any data, the operating system (iOS or Android) may collect standard usage telemetry (e.g. crash reports) governed by your own settings with Apple or Google. Impermanence does not access or process this data.
 
