@@ -44,6 +44,7 @@ import com.neversink.impermanence.model.BellCatalog
 import com.neversink.impermanence.domain.session.TimingSession
 import com.neversink.impermanence.service.SessionEngine
 import com.neversink.impermanence.ui.components.BellHealthBanner
+import com.neversink.impermanence.ui.components.HeadphonesIndicator
 import com.neversink.impermanence.ui.components.RequestNotificationPermission
 import androidx.compose.runtime.collectAsState
 import kotlinx.coroutines.delay
@@ -52,7 +53,6 @@ import kotlin.math.ceil
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QuickSitScreen(
-    use24HourClock: Boolean,
     onClose: () -> Unit
 ) {
     val context = LocalContext.current
@@ -124,6 +124,7 @@ fun QuickSitScreen(
                         Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Close")
                     }
                 },
+                actions = { HeadphonesIndicator() },
                 colors = TopAppBarDefaults.topAppBarColors()
             )
         }
@@ -158,7 +159,7 @@ fun QuickSitScreen(
             )
 
             if (isRunning) {
-                ProgressSection(totalSeconds = totalSeconds, secondsRemaining = secondsRemaining, use24HourClock = use24HourClock)
+                ProgressSection(totalSeconds = totalSeconds, secondsRemaining = secondsRemaining)
             }
         }
     }
@@ -253,7 +254,7 @@ private fun BellSection(
 }
 
 @Composable
-private fun ProgressSection(totalSeconds: Int, secondsRemaining: Int, use24HourClock: Boolean) {
+private fun ProgressSection(totalSeconds: Int, secondsRemaining: Int) {
     val progress = if (totalSeconds == 0) 0f else 1f - secondsRemaining.toFloat() / totalSeconds
     Column(
         modifier = Modifier
@@ -263,12 +264,16 @@ private fun ProgressSection(totalSeconds: Int, secondsRemaining: Int, use24HourC
     ) {
         CircularProgressIndicator(progress = { progress })
         Spacer(modifier = Modifier.height(12.dp))
-        val minutesRemaining = secondsRemaining / 60
-        val secondsPart = secondsRemaining % 60
-        Text(String.format("%02d:%02d", minutesRemaining, secondsPart), style = MaterialTheme.typography.headlineSmall)
-        val finishTime = java.time.LocalTime.now().plusSeconds(secondsRemaining.toLong())
-        val secondsOfDay = finishTime.toSecondOfDay()
-        val formatted = com.neversink.impermanence.util.TimeFormatting.formattedTimeFromSeconds(secondsOfDay, use24HourClock)
-        Text("Ends around $formatted", style = MaterialTheme.typography.bodyMedium)
+        Text("Time remaining", style = MaterialTheme.typography.labelLarge)
+        Text(
+            String.format(
+                java.util.Locale.US,
+                "%02d:%02d:%02d",
+                secondsRemaining / 3600,
+                (secondsRemaining % 3600) / 60,
+                secondsRemaining % 60
+            ),
+            style = MaterialTheme.typography.headlineSmall
+        )
     }
 }

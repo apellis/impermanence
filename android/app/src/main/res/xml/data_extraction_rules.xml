@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+: back up and transfer the user's days and settings, never a running session or
+     the bell log, which only make sense on the device that recorded them. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="device_sharedpref" path="timing_session.xml" />
+        <exclude domain="device_sharedpref" path="ring_log.xml" />
+        <exclude domain="sharedpref" path="timing_session.xml" />
+        <exclude domain="sharedpref" path="ring_log.xml" />
+        <exclude domain="file" path="unreadable-days/" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="device_sharedpref" path="timing_session.xml" />
+        <exclude domain="device_sharedpref" path="ring_log.xml" />
+        <exclude domain="sharedpref" path="timing_session.xml" />
+        <exclude domain="sharedpref" path="ring_log.xml" />
+        <exclude domain="file" path="unreadable-days/" />
+    </device-transfer>
+</data-extraction-rules>

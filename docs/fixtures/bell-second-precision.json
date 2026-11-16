@@ -1,0 +1,77 @@
+{
+  "name": "second-precision",
+  "description": "Start 09:00:30 and segments of 1 s, 90 s and 2 min 15 s: every bell is on the exact second.",
+  "zone": "America/New_York",
+  "loopDays": false,
+  "sessionStart": "2026-06-10T13:00:00Z",
+  "until": "2026-06-10T14:00:00Z",
+  "day": {
+    "id": "CC3E292F-DCB4-5801-978B-81AB43547938",
+    "name": "Seconds",
+    "startTimeSeconds": 32430,
+    "segments": [
+      {
+        "id": "0073D16B-C487-5758-AF66-47EB0FC33AD9",
+        "name": "Segment 1",
+        "durationSeconds": 1
+      },
+      {
+        "id": "2B6DB3EA-C5E5-5B00-8F7D-1B27B46689F4",
+        "name": "Segment 2",
+        "durationSeconds": 90
+      },
+      {
+        "id": "DDB5F126-1DA5-5811-AF91-8A010B9AB4F2",
+        "name": "Segment 3",
+        "durationSeconds": 135
+      }
+    ],
+    "startBell": {
+      "soundId": 0,
+      "numRings": 1
+    },
+    "manualBell": {
+      "soundId": 0,
+      "numRings": 1
+    },
+    "defaultBell": {
+      "soundId": 0,
+      "numRings": 1
+    },
+    "theme": "teal"
+  },
+  "expectedEvents": [
+    {
+      "instant": "2026-06-10T13:00:30Z",
+      "local": "2026-06-10 09:00:30 EDT",
+      "kind": "start",
+      "segmentIndex": 0,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-10T13:00:31Z",
+      "local": "2026-06-10 09:00:31 EDT",
+      "kind": "end",
+      "segmentIndex": 0,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-10T13:02:01Z",
+      "local": "2026-06-10 09:02:01 EDT",
+      "kind": "end",
+      "segmentIndex": 1,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-10T13:04:16Z",
+      "local": "2026-06-10 09:04:16 EDT",
+      "kind": "end",
+      "segmentIndex": 2,
+      "numRings": 1,
+      "soundId": 0
+    }
+  ]
+}

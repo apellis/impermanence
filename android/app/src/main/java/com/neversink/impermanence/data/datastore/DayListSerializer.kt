@@ -19,13 +19,16 @@ object DayListSerializer : Serializer<List<Day>> {
     override val defaultValue: List<Day> = listOf(Day.OpeningDay, Day.FullDay)
 
     override suspend fun readFrom(input: InputStream): List<Day> = withContext(Dispatchers.IO) {
+        val bytes = input.readBytes()
         try {
-            val text = input.readBytes().decodeToString()
+            val text = bytes.decodeToString()
             if (text.isBlank()) return@withContext defaultValue
             DaySanitizer.sanitize(json.decodeFromString(delegate, text))
         } catch (exception: SerializationException) {
+            UnreadableDaysBackup.keep(bytes)
             throw CorruptionException("Unable to read stored days", exception)
         } catch (exception: IllegalArgumentException) {
+            UnreadableDaysBackup.keep(bytes)
             throw CorruptionException("Unable to read stored days", exception)
         }
     }

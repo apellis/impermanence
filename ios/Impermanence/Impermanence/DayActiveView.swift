@@ -237,12 +237,7 @@ struct BellWarningsView: View {
                 warning("Volume is very low. Turn it up to hear the bells.", systemImage: "speaker.wave.1", openSettings: false)
             }
             if engine.usingHeadphones {
-                Label("Bells are playing in headphones", systemImage: "headphones")
-                    .font(.footnote.weight(.semibold))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(.thinMaterial, in: Capsule())
-                    .accessibilityIdentifier("headphonesNotice")
+                HeadphonesNotice()
             }
         }
     }
@@ -275,5 +270,32 @@ struct BellWarningsView: View {
 struct DayActiveView_Previews: PreviewProvider {
     static var previews: some View {
         DayActiveView(day: .constant(Day.fullDay))
+    }
+}
+
+/// A small headphones icon while bells play in headphones. Tapping it says
+/// what that means (docs/BEHAVIOR.md 1.4).
+struct HeadphonesNotice: View {
+    @State private var isExplaining = false
+
+    var body: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.2)) { isExplaining.toggle() }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "headphones")
+                if isExplaining {
+                    Text("Bells play only in the headphones.")
+                        .font(.footnote)
+                }
+            }
+            .font(.footnote.weight(.semibold))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(.thinMaterial, in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Bells play only in the headphones")
+        .accessibilityIdentifier("headphonesNotice")
     }
 }

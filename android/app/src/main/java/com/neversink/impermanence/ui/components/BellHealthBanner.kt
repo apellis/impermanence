@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
+import android.os.PowerManager
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -41,18 +42,25 @@ import kotlinx.coroutines.delay
 data class BellHealth(
     val alarmVolumeOff: Boolean,
     val exactAlarmsOff: Boolean,
-    val notificationsOff: Boolean
+    val notificationsOff: Boolean,
+    val batteryOptimized: Boolean = false
 ) {
-    val hasProblem: Boolean get() = alarmVolumeOff || exactAlarmsOff || notificationsOff
+    val hasProblem: Boolean get() = alarmVolumeOff || exactAlarmsOff || notificationsOff || batteryOptimized
 
     companion object {
         fun check(context: Context): BellHealth {
             val audio = context.getSystemService(AudioManager::class.java)
             val alarmVolume = runCatching { audio?.getStreamVolume(AudioManager.STREAM_ALARM) ?: 1 }.getOrDefault(1)
+            val maxVolume = runCatching { audio?.getStreamMaxVolume(AudioManager.STREAM_ALARM) ?: 7 }.getOrDefault(7)
             return BellHealth(
-                alarmVolumeOff = alarmVolume == 0,
+                // Off, or low enough (under a fifth) that a bell could go unheard.
+                alarmVolumeOff = alarmVolume * 5 < maxVolume || alarmVolume == 0,
                 exactAlarmsOff = !BellAlarmScheduler.canScheduleExact(context),
-                notificationsOff = !NotificationManagerCompat.from(context).areNotificationsEnabled()
+                notificationsOff = !NotificationManagerCompat.from(context).areNotificationsEnabled(),
+                batteryOptimized = runCatching {
+                    context.getSystemService(PowerManager::class.java)
+                        ?.isIgnoringBatteryOptimizations(context.packageName) == false
+                }.getOrDefault(false)
             )
         }
     }
@@ -95,10 +103,24 @@ fun BellHealthBanner(modifier: Modifier = Modifier) {
                     }) { Text(stringResource(R.string.warning_exact_alarms_action)) }
                 }
             }
+            if (health.batteryOptimized) {
+                Text(stringResource(R.string.warning_battery_optimized), style = MaterialTheme.typography.bodyMedium)
+                TextButton(onClick = { openBatteryOptimizationSettings(context) }) {
+                    Text(stringResource(R.string.warning_battery_optimized_action))
+                }
+            }
             if (health.notificationsOff) {
                 Text(stringResource(R.string.warning_notifications_off), style = MaterialTheme.typography.bodyMedium)
             }
         }
+    }
+}
+
+private fun openBatteryOptimizationSettings(context: Context) {
+    val direct = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${context.packageName}"))
+    val list = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+    for (intent in listOf(direct, list)) {
+        if (runCatching { context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess) return
     }
 }
 

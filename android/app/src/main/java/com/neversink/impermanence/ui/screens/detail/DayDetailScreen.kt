@@ -1,10 +1,12 @@
 package com.neversink.impermanence.ui.screens.detail
 
+import com.neversink.impermanence.ui.components.ThemeSwatch
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -101,16 +103,20 @@ private fun DayInfo(day: Day, use24HourClock: Boolean) {
     val (startSeconds, endSeconds) = day.startEndTimeSeconds
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         InfoRow(label = "Schedule", value = "${TimeFormatting.formattedTimeFromSeconds(startSeconds, use24HourClock)} – ${TimeFormatting.formattedTimeFromSeconds(endSeconds, use24HourClock)}")
-        InfoRow(label = "Theme", value = day.theme.displayName)
+        InfoRow(label = "Theme", value = day.theme.displayName) { ThemeSwatch(day.theme) }
         InfoRow(label = "Segments", value = day.segments.size.toString())
     }
 }
 
 @Composable
-private fun InfoRow(label: String, value: String) {
-    Row(modifier = Modifier.fillMaxWidth()) {
+private fun InfoRow(label: String, value: String, leading: (@Composable () -> Unit)? = null) {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
         Text(text = label, fontWeight = FontWeight.SemiBold)
         Spacer(modifier = Modifier.weight(1f))
+        if (leading != null) {
+            leading()
+            Spacer(modifier = Modifier.width(8.dp))
+        }
         Text(text = value)
     }
 }

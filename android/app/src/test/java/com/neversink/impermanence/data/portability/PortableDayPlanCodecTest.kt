@@ -23,6 +23,18 @@ class PortableDayPlanCodecTest {
     }
 
     @Test
+    fun `durations keep their seconds through a round trip`() {
+        val base = Day.OpeningDay
+        val day = base.copy(
+            startTimeSeconds = 9 * 3600 + 30,
+            segments = base.segments.take(3).mapIndexed { i, seg -> seg.copy(durationSeconds = listOf(1, 90, 86_400)[i]) }
+        )
+        val decoded = PortableDayPlanCodec.decode(PortableDayPlanCodec.encode(listOf(day))).single()
+        assertEquals(9 * 3600 + 30, decoded.startTimeSeconds)
+        assertEquals(listOf(1, 90, 86_400), decoded.segments.map { it.durationSeconds })
+    }
+
+    @Test
     fun `decode sanitizes invalid durations and bell rings`() {
         val payload = """
             {
