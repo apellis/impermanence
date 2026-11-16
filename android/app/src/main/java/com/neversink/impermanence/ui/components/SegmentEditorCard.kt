@@ -83,7 +83,8 @@ fun SegmentEditorCard(
                 IconButton(onClick = onDuplicate) {
                     Icon(imageVector = Icons.Default.ContentCopy, contentDescription = "Duplicate")
                 }
-                IconButton(onClick = onDelete) {
+                // A day needs at least one segment.
+                IconButton(onClick = onDelete, enabled = total > 1) {
                     Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete")
                 }
             }

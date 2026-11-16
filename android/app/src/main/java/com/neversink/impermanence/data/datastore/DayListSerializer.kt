@@ -3,6 +3,7 @@ package com.neversink.impermanence.data.datastore
 import androidx.datastore.core.CorruptionException
 import androidx.datastore.core.Serializer
 import com.neversink.impermanence.model.Day
+import com.neversink.impermanence.model.DaySanitizer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
@@ -21,8 +22,10 @@ object DayListSerializer : Serializer<List<Day>> {
         try {
             val text = input.readBytes().decodeToString()
             if (text.isBlank()) return@withContext defaultValue
-            json.decodeFromString(delegate, text)
+            DaySanitizer.sanitize(json.decodeFromString(delegate, text))
         } catch (exception: SerializationException) {
+            throw CorruptionException("Unable to read stored days", exception)
+        } catch (exception: IllegalArgumentException) {
             throw CorruptionException("Unable to read stored days", exception)
         }
     }

@@ -7,7 +7,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -24,11 +23,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -39,7 +38,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,7 +46,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.neversink.impermanence.model.Bell
 import com.neversink.impermanence.model.Day
@@ -82,12 +79,6 @@ fun DayEditScreen(
         )
     }
 
-    LaunchedEffect(editingDay.defaultBell.soundId, editingDay.defaultBell.numRings) {
-        editingDay = editingDay.copy(
-            startBell = editingDay.defaultBell,
-            manualBell = editingDay.defaultBell
-        )
-    }
 
     val canSave = editingDay.name.isNotBlank() && editingDay.segments.isNotEmpty()
 
@@ -142,7 +133,11 @@ fun DayEditScreen(
                     BellSelectionControl(
                         title = "Default bell",
                         bell = editingDay.defaultBell,
-                        onBellChange = { bell -> editingDay = editingDay.copy(defaultBell = bell) }
+                        onBellChange = { bell ->
+                            // iOS: changing the default bell also sets the start and manual bells. Only an
+                            // actual change does this; opening and saving a day leaves them alone.
+                            editingDay = editingDay.copy(defaultBell = bell, startBell = bell, manualBell = bell)
+                        }
                     )
                 }
             }
@@ -302,6 +297,7 @@ private fun TimelineSegmentEditorItem(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ThemePickerField(
     theme: Theme,
@@ -310,28 +306,30 @@ private fun ThemePickerField(
     var expanded by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Theme", fontWeight = FontWeight.SemiBold)
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { expanded = !expanded }
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = it },
+            modifier = Modifier.fillMaxWidth()
         ) {
             OutlinedTextField(
                 value = theme.displayName,
                 onValueChange = {},
                 readOnly = true,
                 label = { Text("Theme") },
-                trailingIcon = { Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = null) },
-                modifier = Modifier.fillMaxWidth()
+                leadingIcon = { ThemeSwatch(theme) },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                modifier = Modifier
+                    .menuAnchor()
+                    .fillMaxWidth()
             )
-            DropdownMenu(
+            ExposedDropdownMenu(
                 expanded = expanded,
                 onDismissRequest = { expanded = false }
             ) {
                 Theme.values().forEach { candidate ->
                     DropdownMenuItem(
-                        text = {
-                            ThemeOptionLabel(theme = candidate)
-                        },
+                        text = { Text(candidate.displayName) },
+                        leadingIcon = { ThemeSwatch(candidate) },
                         onClick = {
                             onThemeSelected(candidate)
                             expanded = false
@@ -344,23 +342,17 @@ private fun ThemePickerField(
 }
 
 @Composable
-private fun ThemeOptionLabel(theme: Theme) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(16.dp)
-                .background(theme.mainColor, RoundedCornerShape(4.dp))
-                .border(
-                    width = 1.dp,
-                    color = if (theme.accentColor == Color.Black) Color.Black.copy(alpha = 0.2f) else theme.accentColor,
-                    shape = RoundedCornerShape(4.dp)
-                )
-        )
-        Text(theme.displayName, color = theme.accentColor)
-    }
+private fun ThemeSwatch(theme: Theme) {
+    Box(
+        modifier = Modifier
+            .size(16.dp)
+            .background(theme.mainColor, RoundedCornerShape(4.dp))
+            .border(
+                width = 1.dp,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.outline,
+                shape = RoundedCornerShape(4.dp)
+            )
+    )
 }
 
 @Composable

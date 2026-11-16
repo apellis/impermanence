@@ -5,40 +5,73 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.neversink.impermanence.domain.timer.DayTimerCoordinator
-import com.neversink.impermanence.domain.timer.DayTimerEngine
+import com.neversink.impermanence.domain.session.TimingSession
+import com.neversink.impermanence.domain.timer.DaySchedule
 import com.neversink.impermanence.model.Day
-import com.neversink.impermanence.service.DayTimerService
+import com.neversink.impermanence.service.SessionEngine
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
+/**
+ * Owns the timing session for the active-day screen. Being on this screen *is* timing the day: the
+ * session starts (or resumes, after process death) when the screen opens and ends when the screen's
+ * back stack entry is destroyed, that is, when the person leaves the screen.
+ */
 class DayActiveViewModel(
     application: Application,
     private val day: Day,
-    private val initialLoopDays: Boolean
+    loopDays: Boolean
 ) : AndroidViewModel(application) {
+    private val _displayState = MutableStateFlow(computeState())
+    val displayState: StateFlow<DaySchedule.DisplayState> = _displayState.asStateFlow()
 
-    private val _timerState = MutableStateFlow(DayTimerEngine(day, initialLoopDays).evaluate().state)
-    val timerState: StateFlow<DayTimerEngine.State> = _timerState.asStateFlow()
+    /** True once the session this screen owns was ended from elsewhere (notification Stop, swipe away). */
+    private val _endedExternally = MutableStateFlow(false)
+    val endedExternally: StateFlow<Boolean> = _endedExternally.asStateFlow()
+
+    private var sessionId: String? = null
 
     init {
-        DayTimerService.start(getApplication(), day, initialLoopDays)
+        SessionEngine.startDay(application, day, loopDays)
+        sessionId = SessionEngine.session.value?.sessionId
         viewModelScope.launch {
-            DayTimerCoordinator.state.collect { state ->
-                state?.let { _timerState.value = it }
+            SessionEngine.session.collect { session ->
+                val ours = sessionId
+                if (ours != null && session?.sessionId != ours) _endedExternally.value = true
+            }
+        }
+        viewModelScope.launch {
+            while (isActive) {
+                _displayState.value = computeState()
+                val now = SessionEngine.now()
+                delay((1_000L - now % 1_000L).coerceIn(50L, 1_000L))
             }
         }
     }
 
     fun updateLoopDays(loopDays: Boolean) {
-        DayTimerService.start(getApplication(), day, loopDays)
+        SessionEngine.setLoopDays(getApplication(), loopDays)
+    }
+
+    private fun computeState(): DaySchedule.DisplayState {
+        val now = SessionEngine.now()
+        val zone = SessionEngine.zone()
+        val session = SessionEngine.session.value as? TimingSession.DaySession
+        val date = if (session != null && session.day.id == day.id) {
+            DaySchedule.effectiveDate(day, LocalDate.parse(session.anchorDate), now, zone, session.loopDays)
+        } else {
+            DaySchedule.initialDate(day, now, zone)
+        }
+        return DaySchedule.displayState(day, DaySchedule.occurrence(day, date, zone), now)
     }
 
     override fun onCleared() {
-        DayTimerService.stop(getApplication())
-        DayTimerCoordinator.clear()
+        sessionId?.let { SessionEngine.endIfCurrent(getApplication(), it, SessionEngine.EndReason.LEFT_SCREEN) }
         super.onCleared()
     }
 

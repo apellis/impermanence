@@ -4,6 +4,7 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -12,15 +13,40 @@ import androidx.compose.ui.test.onFirst
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.neversink.impermanence.MainActivity
 import org.junit.Assert.assertTrue
+import android.Manifest
+import android.os.Build
+import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.rule.GrantPermissionRule
+import com.neversink.impermanence.service.SessionEngine
+import org.junit.After
 import org.junit.Rule
+import org.junit.rules.TestRule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class ParityUxTest {
 
-    @get:Rule
+    // Granted up front so the notification permission prompt can't cover the screen under test.
+    @get:Rule(order = 0)
+    val notifications: TestRule =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            GrantPermissionRule.grant(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            TestRule { base, _ -> base }
+        }
+
+    @get:Rule(order = 1)
     val composeRule = createAndroidComposeRule<MainActivity>()
+
+    // A session left running would make the next test's launch resume it.
+    @After
+    fun endSession() {
+        SessionEngine.end(
+            InstrumentationRegistry.getInstrumentation().targetContext,
+            SessionEngine.EndReason.LEFT_SCREEN
+        )
+    }
 
     @Test
     fun newDayStartsAtMidnight() {
@@ -42,6 +68,25 @@ class ParityUxTest {
         composeRule.onAllNodesWithText("Teal").onFirst().assertIsDisplayed()
 
         composeRule.onNodeWithContentDescription("Cancel").performClick()
+    }
+
+    @Test
+    fun themeAndSoundPickersOpen() {
+        openNewDayScreen()
+        composeRule.onAllNodesWithText("Teal").onFirst().performClick()
+        composeRule.waitUntil(5_000) { hasNodeWithText("Indigo") }
+        composeRule.onAllNodesWithText("Indigo").onFirst().performClick()
+        composeRule.waitUntil(5_000) { hasNodeWithText("Indigo") && !hasNodeWithText("Periwinkle") }
+        composeRule.onNodeWithContentDescription("Cancel").performClick()
+    }
+
+    @Test
+    fun deletingADayAsksFirst() {
+        composeRule.waitUntil(10_000) { hasNodeWithText("Opening Day") || hasNodeWithText("Full Day") }
+        composeRule.onAllNodesWithContentDescription("Delete").onFirst().performClick()
+        composeRule.waitUntil(5_000) { hasNodeWithText("This day and its segments will be removed.") }
+        composeRule.onNodeWithText("Cancel").performClick()
+        assertTrue(hasNodeWithText("Opening Day") || hasNodeWithText("Full Day"))
     }
 
     @Test
