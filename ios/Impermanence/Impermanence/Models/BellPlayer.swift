@@ -112,7 +112,6 @@ final class BellEngine: NSObject, ObservableObject {
     /// Only maintained in UI tests (launch argument --uitesting): a summary of
     /// the engine's state that UI tests can read.
     @Published private(set) var debugStatus = "idle pending=0"
-<<<<<<< HEAD
     /// QA experiment (Debug builds only, docs/qa/ios.md): backup
     /// notifications with no title or text, to see whether iOS then shows
     /// almost nothing on the lock screen while still playing the sound.
@@ -125,8 +124,6 @@ final class BellEngine: NSObject, ObservableObject {
         #endif
     }
 
-=======
->>>>>>> origin/claude/project-thread-hb7jd9
     /// Test hooks exist only in Debug builds, so a release build ignores
     /// these launch arguments.
     static let isUITesting: Bool = {
@@ -445,20 +442,13 @@ final class BellEngine: NSObject, ObservableObject {
         case .day: title = day?.name.isEmpty == false ? day!.name : "Impermanence"
         case .quickSit: title = "Quick Sit"
         }
-<<<<<<< HEAD
         let withoutText = Self.backupsWithoutText
         if withoutText { title = "" }
-=======
->>>>>>> origin/claude/project-thread-hb7jd9
         for group in desired where registeredNotifications[group.id] != group.instant {
             let sound = BellCatalog.sound(for: group.soundId).notificationFileName(chimes: group.chimeIDs.count)
             notifications.add(BellNotificationRequest(id: Self.notificationPrefix + group.id,
                                                       title: title,
-<<<<<<< HEAD
                                                       body: withoutText ? "" : (eventsByID[group.eventID]?.label ?? "Bell"),
-=======
-                                                      body: eventsByID[group.eventID]?.label ?? "Bell",
->>>>>>> origin/claude/project-thread-hb7jd9
                                                       soundFile: sound,
                                                       critical: criticalAlertsAllowed,
                                                       fireIn: max(1, group.instant.timeIntervalSince(now))))
