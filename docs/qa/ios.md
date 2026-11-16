@@ -14,7 +14,8 @@ time shown.
 
 * **INS-1** A clean install opens on Days with "Opening Day" and "Full Day".
 * **INS-2** Opening a day for the first time asks for notifications. Allow
-  them. No warning shows on the active-day screen.
+  them, and fix anything the timing screen warns about. Then no warning shows
+  on the active-day screen.
 * **INS-3-ios** An upgrade over the previous release keeps every day and
   setting.
 
@@ -34,14 +35,14 @@ time shown.
   while the phone is locked.
 * **BOFF-2** Leave the app with the home gesture, without ending the day. The
   bells still ring on time.
-* **BOFF-3** After the bells, unlock. Notification Center holds no bell
+* **BOFF-3** After the bells, unlock. The notification list holds no bell
   notifications.
 
 ## Silent, Do Not Disturb and Focus
 
-* **SIL-1** With the Ring/Silent switch (or Action button) on silent, bells
-  ring on time, both with the screen on and locked.
-* **SIL-2** With Do Not Disturb, and with a Focus that doesn't allow
+* **SIL-1** With the ringer on silent, bells ring on time, both with the
+  screen on and locked.
+* **SIL-2** With Do Not Disturb, and with a Focus or mode that doesn't allow
   Impermanence, bells still ring.
 * **SIL-3-ios** With notifications turned off for Impermanence in Settings,
   the active-day screen warns about it, and bells still ring while the app is
@@ -63,22 +64,26 @@ time shown.
 
 * **QS-1** Start a 1-minute sit. The start chimes ring, then a "Time remaining"
   countdown shows in the ring.
-* **QS-2** The end bell rings at the end, and the sheet closes on its own.
-* **QS-3** Cancel during a sit closes it, and no end bell rings later.
-* **QS-4** A running sit can't be swiped down.
+* **QS-2** The end bell rings at the end, and the Quick Sit screen closes on
+  its own.
+* **QS-3** Cancel during a sit ends it, and no end bell rings later.
+* **QS-4** A running sit can't be dismissed by accident (swipe down on iOS,
+  back on Android).
 
 ## Days and editor
 
-* **EDIT-1** New Day: Add stays disabled until the day has a name and a
-  segment.
+* **EDIT-1** New Day: Add (iOS) or Save (Android) stays disabled until the day
+  has a name and a segment.
 * **EDIT-2** A segment's duration can be set to minutes and seconds, such as
   2 min 30 s. The row and the day's times show the seconds.
-* **EDIT-3** Reorder, duplicate (swipe right) and delete (swipe left) segments.
-  The last segment can't be deleted.
-* **EDIT-4** Cancel with changes asks "Discard changes?". "Keep Editing" keeps
-  them, and "Discard Changes" drops them.
+* **EDIT-3** Reorder, duplicate and delete segments. The last segment can't be
+  deleted.
+* **EDIT-4** Leaving the editor with changes asks "Discard changes?". "Keep
+  Editing" keeps them, and Discard drops them.
 * **EDIT-5** Deleting a day asks "Delete “name”?" first.
 * **EDIT-6** The default bell also sets the start bell and the manual bell.
+* **EDIT-7-ios** Swipe right on a segment to duplicate it, swipe left
+  to delete it, and use Edit to reorder.
 
 ## Import and export
 
@@ -100,21 +105,23 @@ time shown.
 
 ## Recovery after kill or reboot
 
-* **REC-1** Restart the phone during a day. After unlocking, the backup
-  notifications ring the next bells. Opening the app returns to the day.
+* **REC-1** Restart the phone during a day. After unlocking, the next bells
+  still ring. Opening the app returns to the day.
 * **REC-2** After a crash or an update, the days are intact.
+* **REC-3-ios** After the restart in REC-1, and before you open the app, the
+  bells ring from their backup notifications.
 
 ## Accessibility
 
-* **A11Y-1** With VoiceOver on, every control on Days, the active day, Quick
+* **A11Y-1** With VoiceOver or TalkBack on, every control on Days, the active day, Quick
   Sit and the editor has a clear label, and a new segment is announced.
 * **A11Y-2** With the largest text size, nothing important is cut off.
 * **A11Y-3** Dark mode is readable on every theme.
 
 ## Battery and power
 
-* **PWR-1** With Low Power Mode on, bells still ring on time with the phone
-  locked.
+* **PWR-1** With Low Power Mode or Battery Saver on, bells still ring on time
+  with the phone locked.
 * **PWR-2** A locked 1-hour session uses a reasonable amount of battery. Note
   the percentage.
 * **PWR-3-ios** With headphones connected, the headphones icon shows on the
