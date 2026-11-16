@@ -99,6 +99,14 @@ time shown.
 * **EDIT-6** The default bell also sets the start bell and the manual bell.
 * **EDIT-7-android** On Days, each card's menu (⋮) moves the day up or down
   and deletes it. A long day name wraps, and the menu stays visible.
+* **EDIT-8** Touch and hold a segment row, then drag it to a new place. The
+  other rows move aside, the list scrolls when you reach its edge, and after
+  the drop every segment's times are correct.
+* **EDIT-9** With VoiceOver or TalkBack on, the "Move up" and "Move down"
+  actions on a segment row move it one place and announce its new position.
+* **EDIT-10-android** Dragging a segment by its handle (≡) starts at once, with
+  no hold, and doesn't scroll the list. Tapping a row opens its editor in a
+  bottom sheet; swiping the sheet down keeps the edits.
 
 ## Import and export
 

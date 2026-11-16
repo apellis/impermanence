@@ -4,15 +4,11 @@ import android.app.TimePickerDialog
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -42,7 +38,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -56,6 +51,17 @@ import com.neversink.impermanence.ui.components.SegmentEditorCard
 import com.neversink.impermanence.ui.theme.AppUiTokens
 import com.neversink.impermanence.util.TimeFormatting
 import java.util.UUID
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.ui.draw.zIndex
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalView
+import com.neversink.impermanence.ui.components.SegmentRow
+import com.neversink.impermanence.ui.components.rememberReorderState
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -90,6 +96,78 @@ fun DayEditScreen(
         if (hasChanges) confirmDiscard = true else onDismiss()
     }
     BackHandler(enabled = hasChanges) { confirmDiscard = true }
+
+    val view = LocalView.current
+    val listState = rememberLazyListState()
+    // The segment open in the editor sheet, by id so it survives reordering.
+    var editingSegmentId by remember { mutableStateOf<String?>(null) }
+
+    fun updateSegments(change: (MutableList<Day.Segment>) -> Unit) {
+        val segments = editingDay.segments.toMutableList()
+        change(segments)
+        editingDay = editingDay.copy(segments = segments)
+    }
+
+    fun moveSegment(from: Int, to: Int, announce: Boolean = false) {
+        val segments = editingDay.segments
+        if (from == to || from !in segments.indices || to !in segments.indices) return
+        updateSegments { it.add(to, it.removeAt(from)) }
+        if (announce) {
+            val name = segments[from].name.ifBlank { "Segment" }
+            @Suppress("DEPRECATION")
+            view.announceForAccessibility("$name, position ${to + 1} of ${segments.size}")
+        }
+    }
+
+    fun duplicateSegment(index: Int) {
+        val original = editingDay.segments.getOrNull(index) ?: return
+        updateSegments { it.add(index + 1, original.copy(id = UUID.randomUUID().toString())) }
+    }
+
+    val reorderState = rememberReorderState(
+        listState = listState,
+        canMoveTo = { key -> editingDay.segments.any { it.id == key } },
+        onMove = { fromKey, toKey ->
+            val segments = editingDay.segments
+            moveSegment(segments.indexOfFirst { it.id == fromKey }, segments.indexOfFirst { it.id == toKey })
+        }
+    )
+
+    val sheetIndex = editingDay.segments.indexOfFirst { it.id == editingSegmentId }
+    if (sheetIndex >= 0) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val sheetSegment = editingDay.segments[sheetIndex]
+        ModalBottomSheet(
+            onDismissRequest = { editingSegmentId = null },
+            sheetState = sheetState
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .imePadding()
+                    .padding(start = 16.dp, end = 16.dp, bottom = 24.dp)
+            ) {
+                SegmentEditorCard(
+                    segment = sheetSegment,
+                    total = editingDay.segments.size,
+                    schedule = editingDay.segmentSchedule().getOrElse(sheetIndex) { 0 to 0 },
+                    defaultBell = editingDay.defaultBell,
+                    onSegmentChange = { updated -> updateSegments { it[sheetIndex] = updated } },
+                    onDelete = {
+                        updateSegments { it.removeAt(sheetIndex) }
+                        editingSegmentId = null
+                    },
+                    onDuplicate = {
+                        duplicateSegment(sheetIndex)
+                        editingSegmentId = null
+                    },
+                    use24HourClock = use24HourClock,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    }
     if (confirmDiscard) {
         AlertDialog(
             onDismissRequest = { confirmDiscard = false },
@@ -124,13 +202,14 @@ fun DayEditScreen(
         }
     ) { padding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize(),
             contentPadding = PaddingValues(AppUiTokens.ScreenPadding),
-            verticalArrangement = Arrangement.spacedBy(AppUiTokens.SectionSpacing)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            item {
+            item(key = "day-fields") {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = editingDay.name,
@@ -166,7 +245,7 @@ fun DayEditScreen(
             val schedules = editingDay.segmentSchedule()
             val (dayStartSeconds, dayEndSeconds) = editingDay.startEndTimeSeconds
             val totalSeconds = (dayEndSeconds - dayStartSeconds).coerceAtLeast(0)
-            item {
+            item(key = "summary") {
                 TimelineSummaryCard(
                     startSeconds = dayStartSeconds,
                     endSeconds = dayEndSeconds,
@@ -175,60 +254,43 @@ fun DayEditScreen(
                 )
             }
 
-            itemsIndexed(editingDay.segments, key = { _, segment -> segment.id }) { index, segment ->
-                val schedule = schedules.getOrElse(index) { 0 to 0 }
-                TimelineSegmentEditorItem(
-                    startSeconds = schedule.first,
-                    endSeconds = schedule.second,
-                    use24HourClock = use24HourClock,
-                    modifier = Modifier.animateItemPlacement(animationSpec = tween(durationMillis = 180))
-                ) {
-                    SegmentEditorCard(
-                        segment = segment,
-                        position = index,
-                        total = editingDay.segments.size,
-                        schedule = schedule,
-                        defaultBell = editingDay.defaultBell,
-                        onSegmentChange = { updated ->
-                            val updatedSegments = editingDay.segments.toMutableList()
-                            updatedSegments[index] = updated
-                            editingDay = editingDay.copy(segments = updatedSegments)
-                        },
-                        onDelete = {
-                            val updatedSegments = editingDay.segments.toMutableList()
-                            updatedSegments.removeAt(index)
-                            editingDay = editingDay.copy(segments = updatedSegments)
-                        },
-                        onDuplicate = {
-                            val duplicate = segment.copy(id = UUID.randomUUID().toString())
-                            val updatedSegments = editingDay.segments.toMutableList()
-                            updatedSegments.add(index + 1, duplicate)
-                            editingDay = editingDay.copy(segments = updatedSegments)
-                        },
-                        onMoveUp = {
-                            if (index > 0) {
-                                val updatedSegments = editingDay.segments.toMutableList()
-                                updatedSegments.removeAt(index).also { item ->
-                                    updatedSegments.add(index - 1, item)
-                                }
-                                editingDay = editingDay.copy(segments = updatedSegments)
-                            }
-                        },
-                        onMoveDown = {
-                            if (index < editingDay.segments.lastIndex) {
-                                val updatedSegments = editingDay.segments.toMutableList()
-                                val item = updatedSegments.removeAt(index)
-                                updatedSegments.add(index + 1, item)
-                                editingDay = editingDay.copy(segments = updatedSegments)
-                            }
-                        },
-                        use24HourClock = use24HourClock,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+            item(key = "segments-header") {
+                Text(
+                    "Segments",
+                    style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
             }
 
-            item {
+            itemsIndexed(editingDay.segments, key = { _, segment -> segment.id }) { index, segment ->
+                val schedule = schedules.getOrElse(index) { 0 to 0 }
+                val dragging = reorderState.isDragging(segment.id)
+                SegmentRow(
+                    segment = segment,
+                    position = index,
+                    total = editingDay.segments.size,
+                    startSeconds = schedule.first,
+                    endSeconds = schedule.second,
+                    defaultBell = editingDay.defaultBell,
+                    use24HourClock = use24HourClock,
+                    reorderState = reorderState,
+                    dragging = dragging,
+                    onClick = { editingSegmentId = segment.id },
+                    onMoveUp = { moveSegment(index, index - 1, announce = true) },
+                    onMoveDown = { moveSegment(index, index + 1, announce = true) },
+                    onDuplicate = { duplicateSegment(index) },
+                    modifier = if (dragging) {
+                        // The dragged row follows the finger above the others; the rest slide aside.
+                        Modifier
+                            .zIndex(1f)
+                            .graphicsLayer { translationY = reorderState.draggingOffset }
+                    } else {
+                        Modifier.animateItemPlacement(animationSpec = tween(durationMillis = 200))
+                    }
+                )
+            }
+
+            item(key = "add-segment") {
                 FilledTonalButton(onClick = {
                     val newSegment = Day.Segment(
                         name = "",
@@ -272,48 +334,6 @@ private fun TimelineSummaryCard(
                 style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
                 color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
             )
-        }
-    }
-}
-
-@Composable
-private fun TimelineSegmentEditorItem(
-    startSeconds: Int,
-    endSeconds: Int,
-    use24HourClock: Boolean,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
-) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        Column(
-            modifier = Modifier.width(84.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = TimeFormatting.formattedTimeFromSeconds(startSeconds, use24HourClock),
-                style = androidx.compose.material3.MaterialTheme.typography.labelMedium
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Spacer(
-                modifier = Modifier
-                    .width(AppUiTokens.RailWidth)
-                    .height(92.dp)
-                    .background(
-                        androidx.compose.material3.MaterialTheme.colorScheme.outlineVariant,
-                        RoundedCornerShape(2.dp)
-                    )
-            )
-            Text(
-                text = TimeFormatting.formattedTimeFromSeconds(endSeconds, use24HourClock),
-                style = androidx.compose.material3.MaterialTheme.typography.labelMedium
-            )
-        }
-        Box(modifier = Modifier.weight(1f)) {
-            content()
         }
     }
 }
