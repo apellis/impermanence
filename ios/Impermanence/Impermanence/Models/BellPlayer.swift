@@ -27,6 +27,7 @@
 //
 
 import Foundation
+import ActivityKit
 import AVFoundation
 import UserNotifications
 import UIKit
@@ -88,8 +89,17 @@ protocol BellNotificationScheduler: AnyObject {
 
 @MainActor
 final class BellEngine: NSObject, ObservableObject {
-    static let shared = BellEngine(audio: SystemBellAudio(), notifications: SystemBellNotifications(),
-                                   state: .standard, defaults: .standard, clock: { .now }, observeSystem: true)
+    static let shared: BellEngine = {
+        let engine = BellEngine(audio: SystemBellAudio(), notifications: SystemBellNotifications(),
+                                state: .standard, defaults: .standard, clock: { .now }, observeSystem: true)
+        engine.liveActivity = SystemLiveActivity()
+        return engine
+    }()
+
+    /// Shows the running session on the Lock Screen and in the Dynamic
+    /// Island. Display only; nil in unit tests.
+    var liveActivity: BellLiveActivityPresenting?
+    private var lastLiveActivity: LiveActivityContent?
 
     /// The running session, if any.
     @Published private(set) var session: TimingSession?
@@ -111,7 +121,7 @@ final class BellEngine: NSObject, ObservableObject {
 
     /// Only maintained in UI tests (launch argument --uitesting): a summary of
     /// the engine's state that UI tests can read.
-    @Published private(set) var debugStatus = "idle pending=0"
+    @Published private(set) var debugStatus = "idle pending=0 live=0"
     /// QA experiment (Debug builds only, docs/qa/ios.md): backup
     /// notifications with no title or text, to see whether iOS then shows
     /// almost nothing on the lock screen while still playing the sound.
@@ -215,6 +225,7 @@ final class BellEngine: NSObject, ObservableObject {
         persistHandled()
         stopMachinery()
         removeAllBellNotifications()
+        clearLiveActivity()
         updateDebugStatus(force: true)
     }
 
@@ -243,6 +254,7 @@ final class BellEngine: NSObject, ObservableObject {
               !saved.isFinished(at: now, day: day(for: saved), calendar: calendar) else {
             persistSession(nil)
             removeAllBellNotifications(includingLegacy: true)
+            clearLiveActivity()
             return
         }
         // Bells the backup already rang while the process was gone must not
@@ -286,6 +298,7 @@ final class BellEngine: NSObject, ObservableObject {
         tickTimer = nil
         audio.stopKeepAlive()
         removeAllBellNotifications()
+        clearLiveActivity()
         updateDebugStatus(force: true)
     }
 
@@ -361,6 +374,8 @@ final class BellEngine: NSObject, ObservableObject {
         // notification, or be caught up when the call ends: keep the session
         // (and its notifications) until the catch-up time has passed too.
         let finishedAt = audioInterrupted ? now.addingTimeInterval(-(ChimePlanner.catchUpLimit + 5)) : now
+        updateLiveActivity(session: session, day: day, now: now)
+
         if session.isFinished(at: finishedAt, day: day, calendar: calendar) {
             finishNaturally()
         }
@@ -370,6 +385,68 @@ final class BellEngine: NSObject, ObservableObject {
     private var lastPersistedHandled: Set<String> = []
     private var lastRecoveryAttempt = Date.distantPast
     private func defaultsHandledMatches() -> Bool { lastPersistedHandled == handled }
+
+    // MARK: - Lock Screen (Live Activity)
+
+    struct LiveActivityContent: Equatable {
+        var name: String
+        var sessionKey: String
+        var state: TimingActivityAttributes.ContentState
+    }
+
+    /// What the Lock Screen shows at `now`: the current segment and a
+    /// countdown to the next bell, or to the start. Nil when nothing is left
+    /// to count down to.
+    func liveActivityContent(session: TimingSession, day: Day?, now: Date) -> LiveActivityContent? {
+        switch session {
+        case .quickSit(let s):
+            guard now < s.endsAt else { return nil }
+            return .init(name: "Quick Sit", sessionKey: "quicksit.\(s.startedAt.timeIntervalSince1970)",
+                         state: .init(title: "Quick Sit", countdownLabel: "Time remaining",
+                                      start: s.startedAt, end: s.endsAt, detail: nil))
+        case .day(let s):
+            guard let day, !day.segments.isEmpty else { return nil }
+            let name = day.name.isEmpty ? "Impermanence" : day.name
+            let key = "day.\(s.dayID.uuidString).\(s.openedAt.timeIntervalSince1970)"
+            let use24 = UserDefaults.standard.bool(forKey: "use24HourClock")
+            func time(_ date: Date) -> String { TimeFormatting.formattedTime(from: date, use24HourClock: use24) }
+            let occ = DaySchedule.currentOccurrence(of: day, anchor: s.anchor, at: now, loopDays: s.loopDays, calendar: calendar)
+            if now < occ.start {
+                return .init(name: name, sessionKey: key,
+                             state: .init(title: "Day queued", countdownLabel: "Starts in",
+                                          start: min(s.openedAt, occ.start), end: occ.start, detail: "Starts \(time(occ.start))"))
+            }
+            if let i = occ.segments.firstIndex(where: { now < $0.end }) {
+                let segment = occ.segments[i]
+                let title = day.segments[i].name.isEmpty ? "Untitled segment" : day.segments[i].name
+                return .init(name: name, sessionKey: key,
+                             state: .init(title: title, countdownLabel: "Next bell",
+                                          start: segment.start, end: segment.end, detail: "Next bell \(time(segment.end))"))
+            }
+            guard s.loopDays else { return nil }
+            let next = DaySchedule.occurrence(of: day, on: occ.date.adding(days: 1, calendar: calendar), calendar: calendar)
+            return .init(name: name, sessionKey: key,
+                         state: .init(title: "Day queued", countdownLabel: "Starts in",
+                                      start: occ.end, end: next.start, detail: "Starts \(time(next.start))"))
+        }
+    }
+
+    /// Touches ActivityKit only when what is shown changes (at each bell).
+    private func updateLiveActivity(session: TimingSession, day: Day?, now: Date) {
+        guard let liveActivity else { return }
+        guard let content = liveActivityContent(session: session, day: day, now: now) else {
+            clearLiveActivity()
+            return
+        }
+        guard content != lastLiveActivity else { return }
+        lastLiveActivity = content
+        liveActivity.show(name: content.name, sessionKey: content.sessionKey, state: content.state)
+    }
+
+    private func clearLiveActivity() {
+        lastLiveActivity = nil
+        liveActivity?.endAll()
+    }
 
     // MARK: - Interruptions and route
 
@@ -408,7 +485,7 @@ final class BellEngine: NSObject, ObservableObject {
         }
         Task {
             let count = await notifications.pendingCount()
-            self.debugStatus = "\(kind) pending=\(count)"
+            self.debugStatus = "\(kind) pending=\(count) live=\(self.liveActivity?.activeCount ?? 0)"
         }
     }
     private var lastDebugUpdate = Date.distantPast
@@ -803,5 +880,65 @@ final class BellNotificationPresenter: NSObject, UNUserNotificationCenterDelegat
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification,
                                 withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         completionHandler([.sound])
+    }
+}
+
+
+// MARK: - Live Activity back end
+
+@MainActor
+protocol BellLiveActivityPresenting: AnyObject {
+    /// Starts or updates the one Live Activity for this session.
+    func show(name: String, sessionKey: String, state: TimingActivityAttributes.ContentState)
+    /// Removes every Live Activity at once.
+    func endAll()
+    var activeCount: Int { get }
+}
+
+@MainActor
+final class SystemLiveActivity: BellLiveActivityPresenting {
+    private var currentID: String?
+    /// Activities asked to end; ending finishes asynchronously.
+    private var ending: Set<String> = []
+
+    var activeCount: Int {
+        Activity<TimingActivityAttributes>.activities
+            .filter { $0.activityState == .active && !ending.contains($0.id) }.count
+    }
+
+    func show(name: String, sessionKey: String, state: TimingActivityAttributes.ContentState) {
+        guard #available(iOS 16.2, *) else { return }
+        // Stale after its countdown ends plus a margin, in case the app is gone.
+        let content = ActivityContent(state: state, staleDate: state.end.addingTimeInterval(120))
+        if let activity = Activity<TimingActivityAttributes>.activities.first(where: {
+            $0.id == currentID && $0.attributes.sessionKey == sessionKey && $0.activityState == .active
+        }) {
+            Task { await activity.update(content) }
+            return
+        }
+        endAll()
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+        do {
+            let activity = try Activity.request(attributes: TimingActivityAttributes(name: name, sessionKey: sessionKey),
+                                                content: content, pushType: nil)
+            currentID = activity.id
+        } catch {
+            NSLog("BellEngine: Live Activity not started: \(error)")
+        }
+    }
+
+    func endAll() {
+        currentID = nil
+        for activity in Activity<TimingActivityAttributes>.activities where !ending.contains(activity.id) {
+            ending.insert(activity.id)
+            Task {
+                if #available(iOS 16.2, *) {
+                    await activity.end(nil, dismissalPolicy: .immediate)
+                } else {
+                    await activity.end(dismissalPolicy: .immediate)
+                }
+                self.ending.remove(activity.id)
+            }
+        }
     }
 }

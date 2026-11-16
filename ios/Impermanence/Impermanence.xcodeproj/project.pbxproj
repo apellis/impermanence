@@ -46,6 +46,11 @@
 		FA8992F12A9A097D00971377 /* TimeFormatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA8992F02A9A097D00971377 /* TimeFormatting.swift */; };
 		FA8992F32A9A1F2F00971377 /* BellCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA8992F22A9A1F2F00971377 /* BellCatalog.swift */; };
 		FA8992F52A9A4A6800971377 /* QuickSitSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA8992F42A9A4A6800971377 /* QuickSitSheet.swift */; };
+		C1A5E0020000000000000011 /* TimingActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A5E0020000000000000001 /* TimingActivity.swift */; };
+		C1A5E0020000000000000012 /* TimingActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A5E0020000000000000001 /* TimingActivity.swift */; };
+		C1A5E0020000000000000013 /* UndoToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A5E0020000000000000002 /* UndoToast.swift */; };
+		C1A5E0020000000000000014 /* ImpermanenceWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A5E0020000000000000003 /* ImpermanenceWidgets.swift */; };
+		C1A5E0020000000000000015 /* ImpermanenceWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C1A5E0020000000000000005 /* ImpermanenceWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -63,7 +68,28 @@
 			remoteGlobalIDString = FA89927A2A7EAF5500971377;
 			remoteInfo = "Meditation Retreat Timer";
 		};
+		C1A5E0020000000000000026 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = FA8992732A7EAF5500971377 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C1A5E0020000000000000021;
+			remoteInfo = ImpermanenceWidgets;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		C1A5E0020000000000000025 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				C1A5E0020000000000000015 /* ImpermanenceWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		FA89927B2A7EAF5500971377 /* Impermanence.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Impermanence.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -107,6 +133,11 @@
 		FA8992F02A9A097D00971377 /* TimeFormatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeFormatting.swift; sourceTree = "<group>"; };
 		FA8992F22A9A1F2F00971377 /* BellCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BellCatalog.swift; sourceTree = "<group>"; };
 		FA8992F42A9A4A6800971377 /* QuickSitSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickSitSheet.swift; sourceTree = "<group>"; };
+		C1A5E0020000000000000001 /* TimingActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimingActivity.swift; sourceTree = "<group>"; };
+		C1A5E0020000000000000002 /* UndoToast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UndoToast.swift; sourceTree = "<group>"; };
+		C1A5E0020000000000000003 /* ImpermanenceWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImpermanenceWidgets.swift; sourceTree = "<group>"; };
+		C1A5E0020000000000000004 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		C1A5E0020000000000000005 /* ImpermanenceWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ImpermanenceWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -131,6 +162,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C1A5E0020000000000000023 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -140,6 +178,7 @@
 				FA89927D2A7EAF5500971377 /* Impermanence */,
 				FA89928E2A7EAF5600971377 /* ImpermanenceTests */,
 				FA8992982A7EAF5600971377 /* ImpermanenceUITests */,
+				C1A5E0020000000000000020 /* ImpermanenceWidgets */,
 				FA89927C2A7EAF5500971377 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -150,6 +189,7 @@
 				FA89927B2A7EAF5500971377 /* Impermanence.app */,
 				FA89928B2A7EAF5600971377 /* ImpermanenceTests.xctest */,
 				FA8992952A7EAF5600971377 /* ImpermanenceUITests.xctest */,
+				C1A5E0020000000000000005 /* ImpermanenceWidgets.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -177,6 +217,7 @@
 				FA8992E32A8D59A600971377 /* NewDaySheet.swift */,
 				FA8992F42A9A4A6800971377 /* QuickSitSheet.swift */,
 				FA8992F02A9A097D00971377 /* TimeFormatting.swift */,
+				C1A5E0020000000000000002 /* UndoToast.swift */,
 			);
 			path = Impermanence;
 			sourceTree = "<group>";
@@ -223,10 +264,20 @@
 				FA8992D12A8ADFF300971377 /* DayTimer.swift */,
 				C1A5E0010000000000000003 /* BellSchedule.swift */,
 				FA8992DB2A8D43C000971377 /* BellPlayer.swift */,
+				C1A5E0020000000000000001 /* TimingActivity.swift */,
 				FA8992F22A9A1F2F00971377 /* BellCatalog.swift */,
 				FA8992E62A8EC25400971377 /* DayStore.swift */,
 			);
 			path = Models;
+			sourceTree = "<group>";
+		};
+		C1A5E0020000000000000020 /* ImpermanenceWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				C1A5E0020000000000000003 /* ImpermanenceWidgets.swift */,
+				C1A5E0020000000000000004 /* Info.plist */,
+			);
+			path = ImpermanenceWidgets;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -239,10 +290,12 @@
 				FA8992772A7EAF5500971377 /* Sources */,
 				FA8992782A7EAF5500971377 /* Frameworks */,
 				FA8992792A7EAF5500971377 /* Resources */,
+				C1A5E0020000000000000025 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				C1A5E0020000000000000027 /* PBXTargetDependency */,
 			);
 			name = Impermanence;
 			productName = "Meditation Retreat Timer";
@@ -285,6 +338,23 @@
 			productReference = FA8992952A7EAF5600971377 /* ImpermanenceUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		C1A5E0020000000000000021 /* ImpermanenceWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C1A5E0020000000000000028 /* Build configuration list for PBXNativeTarget "ImpermanenceWidgets" */;
+			buildPhases = (
+				C1A5E0020000000000000022 /* Sources */,
+				C1A5E0020000000000000023 /* Frameworks */,
+				C1A5E0020000000000000024 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ImpermanenceWidgets;
+			productName = ImpermanenceWidgets;
+			productReference = C1A5E0020000000000000005 /* ImpermanenceWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -306,6 +376,9 @@
 						CreatedOnToolsVersion = 14.3.1;
 						TestTargetID = FA89927A2A7EAF5500971377;
 					};
+					C1A5E0020000000000000021 = {
+						CreatedOnToolsVersion = 16.0;
+					};
 				};
 			};
 			buildConfigurationList = FA8992762A7EAF5500971377 /* Build configuration list for PBXProject "Impermanence" */;
@@ -324,6 +397,7 @@
 				FA89927A2A7EAF5500971377 /* Impermanence */,
 				FA89928A2A7EAF5600971377 /* ImpermanenceTests */,
 				FA8992942A7EAF5600971377 /* ImpermanenceUITests */,
+				C1A5E0020000000000000021 /* ImpermanenceWidgets */,
 			);
 		};
 /* End PBXProject section */
@@ -360,6 +434,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C1A5E0020000000000000024 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -371,6 +452,8 @@
 				FA8992F32A9A1F2F00971377 /* BellCatalog.swift in Sources */,
 				FA8992F52A9A4A6800971377 /* QuickSitSheet.swift in Sources */,
 				FA8992DC2A8D43C000971377 /* BellPlayer.swift in Sources */,
+				C1A5E0020000000000000011 /* TimingActivity.swift in Sources */,
+				C1A5E0020000000000000013 /* UndoToast.swift in Sources */,
 				FA8992AA2A7EAFFA00971377 /* Theme.swift in Sources */,
 				FA8992C42A88031400971377 /* DayActiveView.swift in Sources */,
 				FA8992C82A881A1400971377 /* ThemeView.swift in Sources */,
@@ -413,6 +496,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C1A5E0020000000000000022 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C1A5E0020000000000000014 /* ImpermanenceWidgets.swift in Sources */,
+				C1A5E0020000000000000012 /* TimingActivity.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -425,6 +517,11 @@
 			isa = PBXTargetDependency;
 			target = FA89927A2A7EAF5500971377 /* Impermanence */;
 			targetProxy = FA8992962A7EAF5600971377 /* PBXContainerItemProxy */;
+		};
+		C1A5E0020000000000000027 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C1A5E0020000000000000021 /* ImpermanenceWidgets */;
+			targetProxy = C1A5E0020000000000000026 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -561,6 +658,7 @@
 					INFOPLIST_KEY_CFBundleDisplayName = Impermanence;
 					INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 					INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -596,6 +694,7 @@
 					INFOPLIST_KEY_CFBundleDisplayName = Impermanence;
 					INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 					INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -683,6 +782,60 @@
 			};
 			name = Release;
 		};
+		C1A5E0020000000000000029 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1.4.0;
+				DEVELOPMENT_TEAM = DBA7U5Z2F6;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ImpermanenceWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Impermanence;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.4.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.neversink.Meditation-Retreat-Timer.Widgets";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		C1A5E0020000000000000030 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1.4.0;
+				DEVELOPMENT_TEAM = DBA7U5Z2F6;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ImpermanenceWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Impermanence;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.4.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.neversink.Meditation-Retreat-Timer.Widgets";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -718,6 +871,15 @@
 			buildConfigurations = (
 				FA8992A62A7EAF5600971377 /* Debug */,
 				FA8992A72A7EAF5600971377 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C1A5E0020000000000000028 /* Build configuration list for PBXNativeTarget "ImpermanenceWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C1A5E0020000000000000029 /* Debug */,
+				C1A5E0020000000000000030 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

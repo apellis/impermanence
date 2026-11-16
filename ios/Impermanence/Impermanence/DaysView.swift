@@ -12,7 +12,7 @@ struct DaysView: View {
     @Binding var days: [Day]
     @Environment(\.scenePhase) private var scenePhase
     @State private var isPresentingSettingsView = false
-    @State private var pendingDelete: Day?
+    @State private var undo: UndoAction?
     @State private var isPresentingNewDayView = false
     @State private var isPresentingQuickSit = false
     @State private var path: [UUID] = []
@@ -29,8 +29,12 @@ struct DaysView: View {
                     .listRowBackground(day.theme.mainColor)
                 }
                 .onDelete { indices in
-                    // Ask first, as deleting a day can't be undone.
-                    pendingDelete = indices.first.map { days[$0] }
+                    // Deletes at once; the toast offers Undo for a few seconds.
+                    guard let index = indices.first, days.indices.contains(index) else { return }
+                    let removed = days.remove(at: index)
+                    undo = .deleted(removed.name, fallback: "Day deleted") {
+                        days.insert(removed, at: min(index, days.count))
+                    }
                 }
                 .onMove { from, to in
                     days.move(fromOffsets: from, toOffset: to)
@@ -44,19 +48,7 @@ struct DaysView: View {
                         .padding()
                 }
             }
-            .confirmationDialog(pendingDelete.map { "Delete \u{201C}\($0.name)\u{201D}?" } ?? "",
-                                isPresented: Binding(get: { pendingDelete != nil },
-                                                     set: { if !$0 { pendingDelete = nil } }),
-                                titleVisibility: .visible,
-                                presenting: pendingDelete) { day in
-                Button("Delete", role: .destructive) {
-                    days.removeAll { $0.id == day.id }
-                    pendingDelete = nil
-                }
-                Button("Cancel", role: .cancel) { pendingDelete = nil }
-            } message: { _ in
-                Text("This day and its segments will be removed.")
-            }
+            .undoToast($undo)
             .navigationTitle("Days")
             .navigationDestination(for: UUID.self) { id in
                 if let index = days.firstIndex(where: { $0.id == id }) {

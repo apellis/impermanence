@@ -14,6 +14,7 @@ import UIKit
 struct DayDetailEditView: View {
     @Binding var day: Day
     @AppStorage("use24HourClock") private var use24HourClock = false
+    @State private var undo: UndoAction?
 
     var body: some View {
         // One schedule per render, shared by the rows and the footer.
@@ -36,7 +37,7 @@ struct DayDetailEditView: View {
                 // (touch and hold, then drag), with no Edit mode needed.
                 ForEach($day.segments, editActions: .move) { $segment in
                     NavigationLink {
-                        SegmentEditorView(day: $day, segmentID: segment.id)
+                        SegmentEditorView(day: $day, segmentID: segment.id, undo: $undo)
                     } label: {
                         SegmentRow(segment: segment,
                                    schedule: schedules[segment.id],
@@ -68,7 +69,11 @@ struct DayDetailEditView: View {
                 .onDelete { indices in
                     // In Edit mode. A day keeps at least one segment.
                     guard day.segments.count - indices.count >= 1 else { return }
-                    day.segments.remove(atOffsets: indices)
+                    if indices.count == 1, let index = indices.first {
+                        deleteSegment(at: index, animated: false)
+                    } else {
+                        day.segments.remove(atOffsets: indices)
+                    }
                 }
                 .deleteDisabled(day.segments.count <= 1)
 
@@ -97,6 +102,7 @@ struct DayDetailEditView: View {
                 }
             }
         }
+        .undoToast($undo)
         .onChange(of: day.defaultBell) { newBell in
             day.startBell = newBell
             day.manualBell = newBell
@@ -114,9 +120,23 @@ struct DayDetailEditView: View {
     }
 
     private func deleteSegment(id: UUID) {
-        guard day.segments.count > 1, let index = day.segments.firstIndex(where: { $0.id == id }) else { return }
-        withAnimation {
-            _ = day.segments.remove(at: index)
+        guard let index = day.segments.firstIndex(where: { $0.id == id }) else { return }
+        deleteSegment(at: index, animated: true)
+    }
+
+    /// Removes the segment at once and offers Undo, which puts it back in
+    /// the same position. A day keeps at least one segment.
+    private func deleteSegment(at index: Int, animated: Bool) {
+        guard day.segments.count > 1, day.segments.indices.contains(index) else { return }
+        let removed = animated ? withAnimation { day.segments.remove(at: index) } : day.segments.remove(at: index)
+        undo = Self.undoDelete(of: removed, at: index, in: $day)
+    }
+
+    static func undoDelete(of removed: Day.Segment, at index: Int, in day: Binding<Day>) -> UndoAction {
+        .deleted(removed.name, fallback: "Segment deleted") {
+            withAnimation {
+                day.wrappedValue.segments.insert(removed, at: min(index, day.wrappedValue.segments.count))
+            }
         }
     }
 
@@ -190,6 +210,7 @@ private struct SegmentRow: View {
 struct SegmentEditorView: View {
     @Binding var day: Day
     let segmentID: UUID
+    @Binding var undo: UndoAction?
     @Environment(\.dismiss) private var dismiss
     @AppStorage("use24HourClock") private var use24HourClock = false
 
@@ -291,7 +312,8 @@ struct SegmentEditorView: View {
                 Button("Delete Segment", role: .destructive) {
                     guard let index, day.segments.count > 1 else { return }
                     dismiss()
-                    day.segments.remove(at: index)
+                    let removed = day.segments.remove(at: index)
+                    undo = DayDetailEditView.undoDelete(of: removed, at: index, in: $day)
                 }
                 .disabled(day.segments.count <= 1)
             } footer: {
