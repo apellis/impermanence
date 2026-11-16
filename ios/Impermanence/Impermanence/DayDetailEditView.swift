@@ -20,7 +20,6 @@ struct DayDetailEditView: View {
             Section(header: Text("Day Info")) {
                 TextField("Name", text: $day.name)
                 DatePicker("Start of Day", selection: $day.startTimeAsDate, displayedComponents: .hourAndMinute)
-                    .accessibilityValue("\(day.startTimeAsDate)")
                 ThemePicker(selection: $day.theme)
                 BellSelectionControl(title: "Default bell", bell: $day.defaultBell)
             }
@@ -93,8 +92,6 @@ struct DayDetailEditView: View {
 }
 
 extension DayDetailEditView {
-    static let maxDurationMinutes = 24 * 60
-
     static func segmentSchedules(for day: Day) -> [UUID: (Date, Date)] {
         let schedules = day.segmentStartEndTimes
         var lookup: [UUID: (Date, Date)] = [:]
@@ -104,30 +101,17 @@ extension DayDetailEditView {
         return lookup
     }
 
-    static func minutes(from duration: TimeInterval) -> Int {
-        let minutes = Int((duration / 60).rounded())
-        return clampedMinutes(minutes)
-    }
-
-    static func timeInterval(fromMinutes minutes: Int) -> TimeInterval {
-        TimeInterval(clampedMinutes(minutes) * 60)
-    }
-
-    static func clampedMinutes(_ minutes: Int) -> Int {
-        min(max(minutes, 1), maxDurationMinutes)
-    }
-
     @ViewBuilder
     private var timelineSummaryRow: some View {
         let start = day.segmentStartEndTimes.first?.0 ?? day.startTimeAsDate
         let end = day.segmentStartEndTimes.last?.1 ?? day.startTimeAsDate
-        let totalMinutes = max(0, Int((end.timeIntervalSince(start) / 60).rounded()))
+        let total = max(0, end.timeIntervalSince(start))
         VStack(alignment: .leading, spacing: 4) {
             Text("Schedule Timeline")
                 .font(.headline)
             Text("\(TimeFormatting.formattedTime(from: start, use24HourClock: use24HourClock)) – \(TimeFormatting.formattedTime(from: end, use24HourClock: use24HourClock))")
                 .font(.subheadline)
-            Text("Total duration: \(formattedDuration(totalMinutes))")
+            Text("Total duration: \(SegmentDuration.shortText(total))")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
@@ -180,7 +164,7 @@ extension DayDetailEditView {
 
     private func addSegment() {
         withAnimation {
-            let segment = Day.Segment(name: "", duration: DayDetailEditView.timeInterval(fromMinutes: 15), customEndBell: nil)
+            let segment = Day.Segment(name: "", duration: 15 * 60, customEndBell: nil)
             day.segments.append(segment)
         }
     }
@@ -198,18 +182,6 @@ extension DayDetailEditView {
         )
     }
 
-    private func formattedDuration(_ minutes: Int) -> String {
-        let hours = minutes / 60
-        let remaining = minutes % 60
-        switch (hours, remaining) {
-        case (0, let m):
-            return "\(m)m"
-        case (let h, 0):
-            return "\(h)h"
-        default:
-            return "\(hours)h \(remaining)m"
-        }
-    }
 }
 
 struct DaySegmentEditorRow: View {
@@ -226,20 +198,28 @@ struct DaySegmentEditorRow: View {
     let onDuplicate: () -> Void
     let onDelete: () -> Void
 
-    private var durationMinutesBinding: Binding<Int> {
+    private var minutesBinding: Binding<Int> {
         Binding(
-            get: { DayDetailEditView.minutes(from: segment.duration) },
-            set: { segment.duration = DayDetailEditView.timeInterval(fromMinutes: $0) }
+            get: { SegmentDuration.parts(of: segment.duration).minutes },
+            set: { segment.duration = SegmentDuration.interval(minutes: $0, seconds: SegmentDuration.parts(of: segment.duration).seconds) }
         )
     }
 
-    private var durationTextBinding: Binding<String> {
+    private var secondsBinding: Binding<Int> {
         Binding(
-            get: { String(durationMinutesBinding.wrappedValue) },
+            get: { SegmentDuration.parts(of: segment.duration).seconds },
+            set: { segment.duration = SegmentDuration.interval(minutes: SegmentDuration.parts(of: segment.duration).minutes, seconds: min(max($0, 0), 59)) }
+        )
+    }
+
+    /// A number field over `value`. Emptying the field means 0, so a new
+    /// number can be typed without selecting the old one first.
+    private func numberText(_ value: Binding<Int>, max upper: Int) -> Binding<String> {
+        Binding(
+            get: { String(value.wrappedValue) },
             set: { newValue in
-                let digits = newValue.filter(\.isNumber)
-                guard let parsed = Int(digits), !digits.isEmpty else { return }
-                durationMinutesBinding.wrappedValue = DayDetailEditView.clampedMinutes(parsed)
+                let digits = String(newValue.filter(\.isNumber).prefix(5))
+                value.wrappedValue = min(Int(digits) ?? 0, upper)
             }
         )
     }
@@ -315,14 +295,23 @@ struct DaySegmentEditorRow: View {
                 Text("Duration")
                     .font(.subheadline)
                 HStack(spacing: 8) {
-                    Text("Minutes")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    TextField("Minutes", text: durationTextBinding)
+                    TextField("Minutes", text: numberText(minutesBinding, max: SegmentDuration.maxSeconds / 60))
                         .textFieldStyle(.roundedBorder)
                         .keyboardType(.numberPad)
-                        .frame(width: 110)
-                    Text(formattedDuration(durationMinutesBinding.wrappedValue))
+                        .frame(width: 72)
+                        .accessibilityLabel("Minutes")
+                    Text("min")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    TextField("Seconds", text: numberText(secondsBinding, max: 59))
+                        .textFieldStyle(.roundedBorder)
+                        .keyboardType(.numberPad)
+                        .frame(width: 56)
+                        .accessibilityLabel("Seconds")
+                    Text("sec")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text(SegmentDuration.shortText(segment.duration))
                         .font(.caption)
                         .foregroundColor(.secondary)
                     Spacer()
@@ -350,23 +339,11 @@ struct DaySegmentEditorRow: View {
         return "\(start) – \(end)"
     }
 
-    private func formattedDuration(_ minutes: Int) -> String {
-        let hours = minutes / 60
-        let remaining = minutes % 60
-        switch (hours, remaining) {
-        case (0, let m):
-            return "\(m)m"
-        case (let h, 0):
-            return "\(h)h"
-        default:
-            return "\(hours)h \(remaining)m"
-        }
-    }
 
     private var durationAdjustRow: some View {
         HStack(spacing: 12) {
             Button {
-                adjustDuration(by: -1)
+                adjustDuration(byMinutes: -1)
             } label: {
                 Image(systemName: "minus")
             }
@@ -375,7 +352,7 @@ struct DaySegmentEditorRow: View {
             .accessibilityLabel("Subtract one minute")
 
             Button {
-                adjustDuration(by: 1)
+                adjustDuration(byMinutes: 1)
             } label: {
                 Image(systemName: "plus")
             }
@@ -384,7 +361,7 @@ struct DaySegmentEditorRow: View {
             .accessibilityLabel("Add one minute")
 
             Button {
-                adjustDuration(by: -5)
+                adjustDuration(byMinutes: -5)
             } label: {
                 Text("-5 min")
             }
@@ -394,7 +371,7 @@ struct DaySegmentEditorRow: View {
             .accessibilityLabel("Subtract five minutes")
 
             Button {
-                adjustDuration(by: 5)
+                adjustDuration(byMinutes: 5)
             } label: {
                 Text("+5 min")
             }
@@ -406,10 +383,9 @@ struct DaySegmentEditorRow: View {
         }
     }
 
-    private func adjustDuration(by delta: Int) {
-        let current = durationMinutesBinding.wrappedValue
-        let updated = DayDetailEditView.clampedMinutes(current + delta)
-        durationMinutesBinding.wrappedValue = updated
+    private func adjustDuration(byMinutes delta: Int) {
+        let current = SegmentDuration.seconds(of: segment.duration)
+        segment.duration = TimeInterval(SegmentDuration.clamped(current + delta * 60))
     }
 }
 

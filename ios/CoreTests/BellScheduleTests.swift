@@ -380,6 +380,20 @@ final class BellScheduleTests: XCTestCase {
         day.startTimeAsDate = Calendar.current.date(from: c)!
         XCTAssertEqual(day.startTime, 7 * 3600 + 15 * 60)
     }
+    func testSegmentsCanBeAnyWholeNumberOfSeconds() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "America/New_York")!
+        var day = Day.emptyDay
+        day.startTime = 7 * 3600
+        day.segments = [Day.Segment(name: "a", duration: SegmentDuration.interval(minutes: 1, seconds: 30)),
+                        Day.Segment(name: "b", duration: SegmentDuration.interval(minutes: 0, seconds: 45))]
+        let occurrence = DaySchedule.occurrence(of: day, on: CalendarDay(year: 2026, month: 6, day: 1), calendar: calendar)
+        XCTAssertEqual(occurrence.segments[0].end.timeIntervalSince(occurrence.start), 90)
+        XCTAssertEqual(occurrence.end.timeIntervalSince(occurrence.start), 135)
+        XCTAssertEqual(SegmentDuration.interval(minutes: 0, seconds: 0), 1)
+        XCTAssertEqual(SegmentDuration.interval(minutes: 1441, seconds: 0), 86_400)
+    }
+
 }
 
 /// Deterministic random numbers so failures are reproducible.
@@ -393,4 +407,5 @@ struct SeededGenerator: RandomNumberGenerator {
         z = (z ^ (z >> 27)) &* 0x94D0_49BB_1331_11EB
         return z ^ (z >> 31)
     }
+
 }

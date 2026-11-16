@@ -221,3 +221,41 @@ extension Day {
         theme: .orange
     )
 }
+
+/// Segment durations are whole seconds, from 1 s to 24 h (docs/BEHAVIOR.md 1.1).
+/// The editor shows them as minutes and seconds.
+enum SegmentDuration {
+    static let minSeconds = 1
+    static let maxSeconds = 24 * 60 * 60
+
+    static func clamped(_ seconds: Int) -> Int {
+        min(max(seconds, minSeconds), maxSeconds)
+    }
+
+    /// Whole seconds of `duration`, clamped.
+    static func seconds(of duration: TimeInterval) -> Int {
+        guard duration.isFinite else { return minSeconds }
+        return clamped(Int(duration.rounded()))
+    }
+
+    /// Minutes and seconds (0...59) of a duration.
+    static func parts(of duration: TimeInterval) -> (minutes: Int, seconds: Int) {
+        let total = seconds(of: duration)
+        return (total / 60, total % 60)
+    }
+
+    static func interval(minutes: Int, seconds: Int) -> TimeInterval {
+        TimeInterval(clamped(minutes * 60 + seconds))
+    }
+
+    /// "45m", "1h 30m", "2m 30s", "1h 0m 5s".
+    static func shortText(_ duration: TimeInterval) -> String {
+        let total = seconds(of: duration)
+        let h = total / 3600, m = (total % 3600) / 60, s = total % 60
+        var parts: [String] = []
+        if h > 0 { parts.append("\(h)h") }
+        if m > 0 || (h > 0 && s > 0) { parts.append("\(m)m") }
+        if s > 0 { parts.append("\(s)s") }
+        return parts.isEmpty ? "0m" : parts.joined(separator: " ")
+    }
+}

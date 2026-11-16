@@ -143,7 +143,7 @@ struct NewDaySheet: View {
 
     private func addSegment() {
         withAnimation {
-            let segment = Day.Segment(name: "", duration: DayDetailEditView.timeInterval(fromMinutes: 15), customEndBell: nil)
+            let segment = Day.Segment(name: "", duration: 15 * 60, customEndBell: nil)
             newDay.segments.append(segment)
             expandedSegmentIDs.insert(segment.id)
         }

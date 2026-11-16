@@ -84,20 +84,26 @@ final class ImpermanenceTests: XCTestCase {
         XCTAssertTrue(schedules.isEmpty)
     }
 
-    func testDurationConversionRoundTrip() {
-        XCTAssertEqual(DayDetailEditView.minutes(from: 5400), 90)
-        XCTAssertEqual(DayDetailEditView.timeInterval(fromMinutes: 90), 5400)
+    func testSegmentDurationsAreWholeSecondsFromOneSecondTo24Hours() {
+        XCTAssertEqual(SegmentDuration.interval(minutes: 90, seconds: 0), 5400)
+        XCTAssertEqual(SegmentDuration.interval(minutes: 2, seconds: 30), 150)
+        XCTAssertEqual(SegmentDuration.interval(minutes: 0, seconds: 0), 1)
+        XCTAssertEqual(SegmentDuration.interval(minutes: 2000, seconds: 0), 86400)
+        XCTAssertEqual(SegmentDuration.parts(of: 150).minutes, 2)
+        XCTAssertEqual(SegmentDuration.parts(of: 150).seconds, 30)
+        XCTAssertEqual(SegmentDuration.shortText(45 * 60), "45m")
+        XCTAssertEqual(SegmentDuration.shortText(150), "2m 30s")
+        XCTAssertEqual(SegmentDuration.shortText(3605), "1h 0m 5s")
+        XCTAssertEqual(SegmentDuration.shortText(5400), "1h 30m")
     }
 
-    func testDurationConversionMinimum() {
-        XCTAssertEqual(DayDetailEditView.minutes(from: 0), 1)
-        XCTAssertEqual(DayDetailEditView.timeInterval(fromMinutes: 0), 60)
-    }
-
-    func testClampedMinutesRespectsBounds() {
-        XCTAssertEqual(DayDetailEditView.clampedMinutes(0), 1)
-        XCTAssertEqual(DayDetailEditView.clampedMinutes(DayDetailEditView.maxDurationMinutes + 10), DayDetailEditView.maxDurationMinutes)
-        XCTAssertEqual(DayDetailEditView.clampedMinutes(90), 90)
+    func testTimesShowSecondsOnlyWhenNeeded() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        let whole = calendar.date(from: DateComponents(year: 2026, month: 3, day: 1, hour: 7, minute: 15))!
+        XCTAssertEqual(TimeFormatting.formattedTime(from: whole, use24HourClock: false), "7:15 AM")
+        XCTAssertEqual(TimeFormatting.formattedTime(from: whole.addingTimeInterval(30), use24HourClock: false), "7:15:30 AM")
+        XCTAssertEqual(TimeFormatting.formattedTime(from: whole.addingTimeInterval(30), use24HourClock: true), "07:15:30")
     }
 
     func testPortableCodecRoundTrip() throws {
