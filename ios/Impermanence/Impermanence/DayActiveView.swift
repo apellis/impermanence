@@ -62,6 +62,14 @@ struct DayActiveView: View {
         _dayTimer = StateObject(wrappedValue: DayTimer(day: day.wrappedValue, loopDays: storedLoopSetting))
     }
 
+    /// VoiceOver users hear when a new segment begins.
+    private func announceSegment(at index: Int) {
+        guard UIAccessibility.isVoiceOverRunning, day.segments.indices.contains(index) else { return }
+        let name = day.segments[index].name
+        UIAccessibility.post(notification: .announcement,
+                             argument: name.isEmpty ? "Next segment" : "Now: \(name)")
+    }
+
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 16.0)
@@ -109,8 +117,9 @@ struct DayActiveView: View {
         .onChange(of: keepScreenAwakeDuringActiveDay) { _ in
             updateIdleTimerBehavior()
         }
-        .onChange(of: dayTimer.segmentIndex) { _ in
+        .onChange(of: dayTimer.segmentIndex) { index in
             updateIdleTimerBehavior()
+            announceSegment(at: index)
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

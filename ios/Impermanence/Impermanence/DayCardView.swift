@@ -25,7 +25,7 @@ struct DayCardView: View {
             HStack {
                 if let rangeText = timeRangeText {
                     Label(rangeText, systemImage: "clock")
-                        .accessibilityLabel("duration \(day.segments.count)")
+                        .accessibilityLabel(Text("\(rangeText), ^[\(day.segments.count) segment](inflect: true)"))
                         .labelStyle(.trailingIcon)
                 }
                 Spacer()

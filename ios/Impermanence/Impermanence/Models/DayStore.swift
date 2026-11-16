@@ -31,7 +31,7 @@ class DayStore: ObservableObject {
 
     func load() async throws {
         let arguments = ProcessInfo.processInfo.arguments
-        if arguments.contains("--uitesting-reset-days") {
+        if BellEngine.isUITesting, arguments.contains("--uitesting-reset-days") {
             days = Self.uiTestDays(startSoon: arguments.contains("--uitesting-days-start-soon"))
             return
         }

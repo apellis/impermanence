@@ -75,6 +75,9 @@ struct SettingsView: View {
                 } footer: {
                     Text("Import or export day plans as JSON.")
                 }
+                Section {
+                    NavigationLink("About Impermanence") { AboutView() }
+                }
             }
             .navigationTitle("Settings")
             .toolbar {
@@ -103,7 +106,7 @@ struct SettingsView: View {
                     let importedDays = try PortableDayPlanCodec.importDays(from: data)
                     days = importedDays
                     transferTitle = "Import Complete"
-                    transferMessage = "Imported \(importedDays.count) day plans."
+                    transferMessage = String(AttributedString(localized: "Imported ^[\(importedDays.count) day](inflect: true).").characters)
                 } catch {
                     transferTitle = "Import Failed"
                     transferMessage = error.localizedDescription
@@ -118,7 +121,7 @@ struct SettingsView: View {
                 do {
                     _ = try result.get()
                     transferTitle = "Export Complete"
-                    transferMessage = "Exported \(days.count) day plans."
+                    transferMessage = String(AttributedString(localized: "Exported ^[\(days.count) day](inflect: true).").characters)
                 } catch {
                     transferTitle = "Export Failed"
                     transferMessage = error.localizedDescription

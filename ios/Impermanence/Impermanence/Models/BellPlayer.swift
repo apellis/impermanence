@@ -112,7 +112,15 @@ final class BellEngine: NSObject, ObservableObject {
     /// Only maintained in UI tests (launch argument --uitesting): a summary of
     /// the engine's state that UI tests can read.
     @Published private(set) var debugStatus = "idle pending=0"
-    static let isUITesting = ProcessInfo.processInfo.arguments.contains("--uitesting")
+    /// Test hooks exist only in Debug builds, so a release build ignores
+    /// these launch arguments.
+    static let isUITesting: Bool = {
+        #if DEBUG
+        return ProcessInfo.processInfo.arguments.contains("--uitesting")
+        #else
+        return false
+        #endif
+    }()
 
     /// Looks up a day plan by id. Set by the app once days are loaded.
     var dayProvider: (UUID) -> Day? = { _ in nil }

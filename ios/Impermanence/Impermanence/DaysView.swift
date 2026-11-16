@@ -12,7 +12,7 @@ struct DaysView: View {
     @Binding var days: [Day]
     @Environment(\.scenePhase) private var scenePhase
     @State private var isPresentingSettingsView = false
-    @State private var isPresentingAboutView = false
+    @State private var pendingDelete: Day?
     @State private var isPresentingNewDayView = false
     @State private var isPresentingQuickSit = false
     @State private var path: [UUID] = []
@@ -29,11 +29,33 @@ struct DaysView: View {
                     .listRowBackground(day.theme.mainColor)
                 }
                 .onDelete { indices in
-                    days.remove(atOffsets: indices)
+                    // Ask first, as deleting a day can't be undone.
+                    pendingDelete = indices.first.map { days[$0] }
                 }
                 .onMove { from, to in
                     days.move(fromOffsets: from, toOffset: to)
                 }
+            }
+            .overlay {
+                if days.isEmpty {
+                    Text("No days yet. Tap New Day to begin.")
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding()
+                }
+            }
+            .confirmationDialog(pendingDelete.map { "Delete \u{201C}\($0.name)\u{201D}?" } ?? "",
+                                isPresented: Binding(get: { pendingDelete != nil },
+                                                     set: { if !$0 { pendingDelete = nil } }),
+                                titleVisibility: .visible,
+                                presenting: pendingDelete) { day in
+                Button("Delete", role: .destructive) {
+                    days.removeAll { $0.id == day.id }
+                    pendingDelete = nil
+                }
+                Button("Cancel", role: .cancel) { pendingDelete = nil }
+            } message: { _ in
+                Text("This day and its segments will be removed.")
             }
             .navigationTitle("Days")
             .navigationDestination(for: UUID.self) { id in
@@ -42,25 +64,18 @@ struct DaysView: View {
                 }
             }
             .toolbar {
-                ToolbarItemGroup(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        isPresentingAboutView = true
-                    }) {
-                        Image(systemName: "info.circle")
-                    }
-                    .accessibilityLabel("About")
+                ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: {
                         isPresentingSettingsView = true
                     }) {
                         Image(systemName: "gearshape")
                     }
                     .accessibilityLabel("Settings")
-                    Button(action: {
+                }
+                ToolbarItemGroup(placement: .navigationBarTrailing) {
+                    Button("Quick Sit") {
                         isPresentingQuickSit = true
-                    }) {
-                        Image(systemName: "stopwatch")
                     }
-                    .accessibilityLabel("Quick Sit")
                     Button(action: {
                         isPresentingNewDayView = true
                     }) {
@@ -74,9 +89,6 @@ struct DaysView: View {
             }
             .sheet(isPresented: $isPresentingSettingsView) {
                 SettingsView(days: $days, isPresentingSettingsView: $isPresentingSettingsView)
-            }
-            .sheet(isPresented: $isPresentingAboutView) {
-                AboutView(isPresentingAboutView: $isPresentingAboutView)
             }
             .sheet(isPresented: $isPresentingQuickSit) {
                 QuickSitSheet(isPresented: $isPresentingQuickSit)
