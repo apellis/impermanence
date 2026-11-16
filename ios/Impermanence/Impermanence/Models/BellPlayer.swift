@@ -345,7 +345,11 @@ final class BellEngine: NSObject, ObservableObject {
 
         reconcileNotifications(events: events, chimes: chimes, session: session, day: day, now: now)
 
-        if session.isFinished(at: now, day: day, calendar: calendar) {
+        // While interrupted, the last bell may still be ringing as a backup
+        // notification, or be caught up when the call ends: keep the session
+        // (and its notifications) until the catch-up time has passed too.
+        let finishedAt = audioInterrupted ? now.addingTimeInterval(-(ChimePlanner.catchUpLimit + 5)) : now
+        if session.isFinished(at: finishedAt, day: day, calendar: calendar) {
             finishNaturally()
         }
         updateDebugStatus()
@@ -412,8 +416,13 @@ final class BellEngine: NSObject, ObservableObject {
         guard notificationsAllowed else { return }
         let desired = ChimePlanner.notificationGroups(chimes: chimes, handled: handled, sessionStart: session.openedAt, now: now)
         let desiredInstants = Dictionary(desired.map { ($0.id, $0.instant) }, uniquingKeysWith: { a, _ in a })
-        let stale = registeredNotifications.filter { desiredInstants[$0.key] != $0.value }.map(\.key)
-        if !stale.isEmpty { removeNotifications(ids: stale) }
+        let stale = registeredNotifications.filter { desiredInstants[$0.key] != $0.value }
+        // A backup whose time has come is left alone: iOS may still be about
+        // to deliver it, for example while a call holds the audio. Only
+        // future ones that changed are withdrawn.
+        let withdrawn = stale.filter { $0.value > now }.map(\.key)
+        if !withdrawn.isEmpty { removeNotifications(ids: withdrawn) }
+        for id in stale.keys where stale[id]! <= now { registeredNotifications[id] = nil }
 
         let eventsByID = Dictionary(events.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         let title: String
