@@ -101,8 +101,9 @@ it should and never when it shouldn't.
     use more power, plugged in or not.
 - Bells are **just sounds**. They don't fill the notification list.
   Android's only notification is the ongoing timer notification, with Stop.
-  iOS may use a backup notification, which fires only if iOS has stopped the
-  app and is cleared afterwards (pending Alex's decision).
+  iOS keeps a backup notification for each bell in the next 2 hours. It
+  fires only if iOS has stopped the app, plays only its sound when the app is
+  in front, and is cleared from the notification list afterwards.
 - While headphones or a Bluetooth audio device are connected, the timing
   screens show a small headphones icon, so it's clear where bells will sound.
   On iOS bells play only in the headphones; Android's alarm stream also plays
