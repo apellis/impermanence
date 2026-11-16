@@ -23,11 +23,100 @@ struct QuickSitSheet: View {
 
     var body: some View {
         NavigationStack {
+            Group {
+                if isRunning {
+                    runningView
+                } else {
+                    setupForm
+                }
+            }
+            .navigationTitle("Quick Sit")
+            .toolbar {
+                if isRunning {
+                    ToolbarItem(placement: .cancellationAction) {
+                        // Ends the sit; its end bell won't ring.
+                        Button("Cancel", role: .destructive) {
+                            stopTimer()
+                        }
+                    }
+                } else {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Close") {
+                            stopTimer()
+                            isPresented = false
+                        }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Start") {
+                            startSession()
+                        }
+                    }
+                }
+            }
+            .interactiveDismissDisabled(isRunning)
+            .overlay(alignment: .bottomLeading) { BellEngineDebugStatus() }
+            .onDisappear {
+                // Leaving Quick Sit ends it: no more bells. A sit that just
+                // completed keeps its end chimes.
+                timer?.invalidate()
+                timer = nil
+                if isRunning && !completed {
+                    engine.endSession()
+                }
+            }
+            .onAppear {
+                if case .quickSit(let s)? = engine.session {
+                    // Resumed after iOS ended the app mid-sit.
+                    attach(to: s)
+                } else {
+                    selectedBell = BellCatalog.defaultSound.id
+                    startChimes = 1
+                    endChimes = 1
+                }
+            }
+        }
+    }
+
+    /// While the sit runs: a live countdown and progress ring, nothing to fiddle with.
+    private var runningView: some View {
+        VStack(spacing: 24) {
+            BellWarningsView(engine: engine)
+                .padding(.horizontal)
+            Spacer(minLength: 0)
+            ZStack {
+                Circle()
+                    .stroke(Color.accentColor.opacity(0.15), lineWidth: 14)
+                Circle()
+                    .trim(from: 0, to: progress)
+                    .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 14, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                    .animation(.linear(duration: 0.25), value: progress)
+                VStack(spacing: 6) {
+                    Text("Time remaining")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Text(TimeFormatting.formattedDuration(from: TimeInterval(secondsRemaining)))
+                        .font(.system(size: 48, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                        .minimumScaleFactor(0.5)
+                        .lineLimit(1)
+                }
+                .padding(28)
+                .accessibilityElement(children: .combine)
+            }
+            .frame(maxWidth: 300, maxHeight: 300)
+            .padding(.horizontal, 32)
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical)
+    }
+
+    private var setupForm: some View {
             Form {
                 Section(header: Text("Duration")) {
                     VStack(alignment: .leading, spacing: 12) {
                         Stepper(value: $minutes, in: 1...180, step: 1) {
-                            Text("\(minutes) minutes")
+                            Text("^[\(minutes) minute](inflect: true)")
                                 .font(.headline)
                         }
                         .disabled(isRunning)
@@ -67,63 +156,7 @@ struct QuickSitSheet: View {
                     .disabled(isRunning)
                 }
 
-                if isRunning {
-                    Section {
-                        BellWarningsView(engine: engine)
-                            .listRowInsets(EdgeInsets())
-                    }
-                    .listRowBackground(Color.clear)
-                    Section(header: Text("Progress")) {
-                        VStack(alignment: .leading) {
-                            ProgressView(value: progress)
-                            Text(remainingText)
-                                .font(.headline)
-                                .monospacedDigit()
-                        }
-                    }
-                }
             }
-            .navigationTitle("Quick Sit")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") {
-                        stopTimer()
-                        isPresented = false
-                    }
-                    .disabled(isRunning)
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(isRunning ? "Cancel" : "Start") {
-                        if isRunning {
-                            stopTimer()
-                        } else {
-                            startSession()
-                        }
-                    }
-                }
-            }
-            .interactiveDismissDisabled(isRunning)
-            .overlay(alignment: .bottomLeading) { BellEngineDebugStatus() }
-            .onDisappear {
-                // Leaving Quick Sit ends it: no more bells. A sit that just
-                // completed keeps its end chimes.
-                timer?.invalidate()
-                timer = nil
-                if isRunning && !completed {
-                    engine.endSession()
-                }
-            }
-            .onAppear {
-                if case .quickSit(let s)? = engine.session {
-                    // Resumed after iOS ended the app mid-sit.
-                    attach(to: s)
-                } else {
-                    selectedBell = BellCatalog.defaultSound.id
-                    startChimes = 1
-                    endChimes = 1
-                }
-            }
-        }
     }
 
     private func adjustMinutes(by delta: Int) {
@@ -172,13 +205,6 @@ struct QuickSitSheet: View {
     private var progress: Double {
         guard totalSeconds > 0 else { return 0 }
         return Double(totalSeconds - secondsRemaining) / Double(totalSeconds)
-    }
-
-    private var remainingText: String {
-        let formatter = DateComponentsFormatter()
-        formatter.allowedUnits = [.minute, .second]
-        formatter.zeroFormattingBehavior = .pad
-        return formatter.string(from: TimeInterval(secondsRemaining)) ?? ""
     }
 
     private func startSession() {

@@ -4,6 +4,10 @@
 //
 //  Created by Alex Ellis on 8/16/23.
 //
+//  New Day and Edit share one sheet around DayDetailEditView. Add/Done stay
+//  disabled until the day can be saved, and closing with unsaved changes
+//  asks first (docs/BEHAVIOR.md, Editing).
+//
 
 import SwiftUI
 
@@ -11,193 +15,76 @@ struct NewDaySheet: View {
     @Binding var days: [Day]
     @Binding var isPresentingNewDayView: Bool
 
-    @State private var newDay = Day.emptyDay
-    @State private var expandedSegmentIDs: Set<UUID> = []
-    @AppStorage("use24HourClock") private var use24HourClock = false
+    var body: some View {
+        DayEditorSheet(title: "New Day", confirmTitle: "Add", original: Day.emptyDay) { newDay in
+            days.append(newDay)
+            isPresentingNewDayView = false
+        } onCancel: {
+            isPresentingNewDayView = false
+        }
+    }
+}
+
+/// A sheet that edits a copy of `original` and hands it back on save.
+struct DayEditorSheet: View {
+    let title: String
+    let confirmTitle: String
+    let original: Day
+    let onSave: (Day) -> Void
+    let onCancel: () -> Void
+
+    @State private var draft: Day
+    @State private var isConfirmingDiscard = false
+
+    init(title: String, confirmTitle: String, original: Day,
+         onSave: @escaping (Day) -> Void, onCancel: @escaping () -> Void) {
+        self.title = title
+        self.confirmTitle = confirmTitle
+        self.original = original
+        self.onSave = onSave
+        self.onCancel = onCancel
+        _draft = State(initialValue: original)
+    }
+
+    private var hasChanges: Bool { Self.differs(draft, original) }
 
     var body: some View {
         NavigationStack {
-            Form {
-                dayInfoSection
-                segmentsSection
-            }
-            .navigationTitle("New Day")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Dismiss") {
-                        isPresentingNewDayView = false
+            DayDetailEditView(day: $draft)
+                .navigationTitle(title)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") {
+                            if hasChanges {
+                                isConfirmingDiscard = true
+                            } else {
+                                onCancel()
+                            }
+                        }
+                        .confirmationDialog("Discard changes?", isPresented: $isConfirmingDiscard, titleVisibility: .visible) {
+                            Button("Discard Changes", role: .destructive, action: onCancel)
+                            Button("Keep Editing", role: .cancel) {}
+                        }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button(confirmTitle) {
+                            var saved = draft
+                            saved.name = saved.name.trimmingCharacters(in: .whitespacesAndNewlines)
+                            onSave(saved)
+                        }
+                        .disabled(!DayDetailEditView.canSave(draft))
                     }
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Add") {
-                        days.append(newDay)
-                        isPresentingNewDayView = false
-                    }
-                    .disabled(newDay.name.trimmingCharacters(in: .whitespaces).isEmpty || newDay.segments.isEmpty)
-                }
-            }
-            .onAppear {
-                expandedSegmentIDs = Set(newDay.segments.map(\.id))
-            }
-            .onChange(of: newDay.segments.map(\.id)) { ids in
-                let valid = Set(ids)
-                expandedSegmentIDs = expandedSegmentIDs.intersection(valid)
-            }
-            .onChange(of: newDay.defaultBell) { newBell in
-                newDay.startBell = newBell
-                newDay.manualBell = newBell
-            }
         }
+        .interactiveDismissDisabled(hasChanges)
     }
 
-    private var dayInfoSection: some View {
-        Section(header: Text("Day Info")) {
-            TextField("Name", text: $newDay.name)
-            DatePicker("Start of Day", selection: $newDay.startTimeAsDate, displayedComponents: .hourAndMinute)
-            ThemePicker(selection: $newDay.theme)
-            BellSelectionControl(title: "Default bell", bell: $newDay.defaultBell)
-        }
-    }
-
-    private var segmentsSection: some View {
-        Section(header: Text("Segments")) {
-            let scheduleMap = DayDetailEditView.segmentSchedules(for: newDay)
-
-            if newDay.segments.isEmpty {
-                Text("No segments yet. Tap Add Segment to begin.")
-                    .font(.footnote)
-                    .foregroundColor(.secondary)
-                    .padding(.vertical, 4)
-            }
-
-            ForEach(newDay.segments, id: \.id) { segment in
-                let binding = safeBinding(for: segment.id)
-                let schedule = scheduleMap[segment.id]
-                let isExpanded = expandedSegmentIDs.contains(segment.id)
-
-                VStack(spacing: 0) {
-                    Button(action: { toggleExpanded(id: segment.id) }) {
-                        SegmentCardView(
-                            segment: segment,
-                            startTime: schedule?.0 ?? newDay.startTimeAsDate,
-                            endTime: schedule?.1 ?? newDay.startTimeAsDate,
-                            theme: newDay.theme,
-                            bell: segment.resolvedEndBell(defaultBell: newDay.defaultBell),
-                            use24HourClock: use24HourClock,
-                            useTheme: isExpanded,
-                            highlighted: isExpanded
-                        )
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-
-                    if isExpanded {
-                        Divider().padding(.horizontal)
-                        DaySegmentEditorRow(
-                            segment: binding,
-                            totalSegments: newDay.segments.count,
-                            startTime: schedule?.0 ?? newDay.startTimeAsDate,
-                            endTime: schedule?.1 ?? newDay.startTimeAsDate,
-                            use24HourClock: use24HourClock,
-                            defaultBell: newDay.defaultBell,
-                            canMoveUp: segment.id != newDay.segments.first?.id,
-                            canMoveDown: segment.id != newDay.segments.last?.id,
-                            onMoveUp: { moveSegment(id: segment.id, offset: -1) },
-                            onMoveDown: { moveSegment(id: segment.id, offset: 1) },
-                            onDuplicate: { duplicateSegment(id: segment.id) },
-                            onDelete: { deleteSegment(id: segment.id) }
-                        )
-                        .padding(.horizontal)
-                        .padding(.bottom, 12)
-                    }
-                }
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(uiColor: .secondarySystemBackground))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(isExpanded ? newDay.theme.mainColor : Color.clear, lineWidth: isExpanded ? 2 : 0)
-                )
-                .padding(.vertical, 4)
-            }
-            .onDelete { indices in
-                let removed = indices.compactMap { index in
-                    newDay.segments.indices.contains(index) ? newDay.segments[index].id : nil
-                }
-                newDay.segments.remove(atOffsets: indices)
-                removed.forEach { expandedSegmentIDs.remove($0) }
-            }
-            .onMove { from, to in
-                newDay.segments.move(fromOffsets: from, toOffset: to)
-            }
-
-            Button(action: addSegment) {
-                Label("Add Segment", systemImage: "plus")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(newDay.theme.mainColor)
-        }
-    }
-
-    private func addSegment() {
-        withAnimation {
-            let segment = Day.Segment(name: "", duration: DayDetailEditView.timeInterval(fromMinutes: 15), customEndBell: nil)
-            newDay.segments.append(segment)
-            expandedSegmentIDs.insert(segment.id)
-        }
-    }
-
-    private func toggleExpanded(id: UUID) {
-        withAnimation {
-            if expandedSegmentIDs.contains(id) {
-                expandedSegmentIDs.remove(id)
-            } else {
-                expandedSegmentIDs.insert(id)
-            }
-        }
-    }
-
-    private func duplicateSegment(id: UUID) {
-        guard let index = newDay.segments.firstIndex(where: { $0.id == id }) else { return }
-        withAnimation {
-            var duplicate = newDay.segments[index]
-            duplicate.id = UUID()
-            newDay.segments.insert(duplicate, at: index + 1)
-            expandedSegmentIDs.insert(duplicate.id)
-        }
-    }
-
-    private func moveSegment(id: UUID, offset: Int) {
-        guard let index = newDay.segments.firstIndex(where: { $0.id == id }) else { return }
-        let target = index + offset
-        guard target >= 0 && target < newDay.segments.count else { return }
-        withAnimation(.easeInOut(duration: 0.18)) {
-            let segment = newDay.segments.remove(at: index)
-            newDay.segments.insert(segment, at: target)
-        }
-    }
-
-    private func deleteSegment(id: UUID) {
-        guard let index = newDay.segments.firstIndex(where: { $0.id == id }) else { return }
-        withAnimation {
-            newDay.segments.remove(at: index)
-            expandedSegmentIDs.remove(id)
-        }
-    }
-
-    private func safeBinding(for id: UUID) -> Binding<Day.Segment> {
-        Binding(
-            get: {
-                newDay.segments.first(where: { $0.id == id }) ?? Day.Segment(name: "", duration: 0, customEndBell: nil)
-            },
-            set: { updated in
-                if let index = newDay.segments.firstIndex(where: { $0.id == id }) {
-                    newDay.segments[index] = updated
-                }
-            }
-        )
+    /// Days aren't Equatable, so compare their encoded form.
+    static func differs(_ a: Day, _ b: Day) -> Bool {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        return (try? encoder.encode(a)) != (try? encoder.encode(b))
     }
 }
 

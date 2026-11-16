@@ -65,12 +65,13 @@ final class ImpermanenceUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any).matching(midnight).firstMatch.waitForExistence(timeout: 3),
                       app.debugDescription)
 
-        let dismissButton = app.buttons["Dismiss"]
-        XCTAssertTrue(dismissButton.exists)
-        dismissButton.tap()
+        let cancelButton = app.buttons["Cancel"]
+        XCTAssertTrue(cancelButton.exists)
+        cancelButton.tap()
+        XCTAssertFalse(app.navigationBars["New Day"].waitForExistence(timeout: 1))
     }
 
-    func testQuickSitDisablesCloseWhileRunning() throws {
+    func testQuickSitCanOnlyBeCancelledWhileRunning() throws {
         let app = launchApp()
         let quickSitButton = app.buttons["Quick Sit"]
         XCTAssertTrue(quickSitButton.waitForExistence(timeout: 5))
@@ -83,14 +84,15 @@ final class ImpermanenceUITests: XCTestCase {
         startButton.tap()
         allowNotificationsIfAsked()
 
-        let closeButton = app.buttons["Close"]
-        XCTAssertTrue(closeButton.exists)
-        XCTAssertFalse(closeButton.isEnabled)
-
+        // While it runs: a live countdown, and Cancel is the only way out.
+        XCTAssertTrue(app.staticTexts["Time remaining"].waitForExistence(timeout: 3))
+        XCTAssertFalse(app.buttons["Close"].exists)
         let cancelButton = app.buttons["Cancel"]
         XCTAssertTrue(cancelButton.exists)
         cancelButton.tap()
 
+        let closeButton = app.buttons["Close"]
+        XCTAssertTrue(closeButton.waitForExistence(timeout: 3))
         XCTAssertTrue(closeButton.isEnabled)
         closeButton.tap()
     }
@@ -105,7 +107,7 @@ final class ImpermanenceUITests: XCTestCase {
         XCTAssertTrue(waitForStatus(app, prefix: "day pending=", timeout: 10) { $0 > 0 },
                       "safety-net notifications not scheduled: \(status(app))")
 
-        app.navigationBars.buttons["Day"].tap()
+        app.buttons["End Day"].tap()
         XCTAssertTrue(waitForStatus(app, prefix: "idle pending=", timeout: 10) { $0 == 0 },
                       "bells still scheduled after leaving: \(status(app))")
     }
@@ -156,7 +158,7 @@ final class ImpermanenceUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars.buttons["Manual bell controls"].waitForExistence(timeout: 10),
                       "active day not resumed")
         XCTAssertTrue(waitForStatus(app, prefix: "day pending=", timeout: 10) { $0 > 0 })
-        app.navigationBars.buttons["Day"].tap()
+        app.buttons["End Day"].tap()
         XCTAssertTrue(waitForStatus(app, prefix: "idle pending=", timeout: 10) { $0 == 0 })
     }
 
@@ -165,7 +167,7 @@ final class ImpermanenceUITests: XCTestCase {
         app.buttons["Quick Sit"].tap()
         let subtract = app.buttons["Subtract 5 minutes"]
         for _ in 0..<3 { subtract.tap() }
-        XCTAssertTrue(app.staticTexts["1 minutes"].exists)
+        XCTAssertTrue(app.staticTexts["1 minute"].exists)
         app.buttons["Start"].tap()
         allowNotificationsIfAsked()
         XCTAssertTrue(waitForStatus(app, prefix: "quicksit pending=", timeout: 10) { $0 == 1 })
@@ -185,7 +187,7 @@ final class ImpermanenceUITests: XCTestCase {
     /// like iOS ending it, so the session would resume) is discarded.
     private func launchApp(keepSession: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments += ["--uitesting-reset-days", "--uitesting"]
+        app.launchArguments += ["--uitesting-reset-days", "--uitesting-days-start-soon", "--uitesting"]
         if !keepSession { app.launchArguments.append("--uitesting-reset-session") }
         app.launch()
         return app

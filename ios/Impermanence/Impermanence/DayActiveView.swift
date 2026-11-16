@@ -62,6 +62,14 @@ struct DayActiveView: View {
         _dayTimer = StateObject(wrappedValue: DayTimer(day: day.wrappedValue, loopDays: storedLoopSetting))
     }
 
+    /// VoiceOver users hear when a new segment begins.
+    private func announceSegment(at index: Int) {
+        guard UIAccessibility.isVoiceOverRunning, day.segments.indices.contains(index) else { return }
+        let name = day.segments[index].name
+        UIAccessibility.post(notification: .announcement,
+                             argument: name.isEmpty ? "Next segment" : "Now: \(name)")
+    }
+
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 16.0)
@@ -109,8 +117,9 @@ struct DayActiveView: View {
         .onChange(of: keepScreenAwakeDuringActiveDay) { _ in
             updateIdleTimerBehavior()
         }
-        .onChange(of: dayTimer.segmentIndex) { _ in
+        .onChange(of: dayTimer.segmentIndex) { index in
             updateIdleTimerBehavior()
+            announceSegment(at: index)
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -215,24 +224,33 @@ struct BellWarningsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             if !engine.notificationsAllowed {
-                warning("Notifications are off. Bells ring while Impermanence is running, but not if iOS closes it.",
-                        systemImage: "bell.slash")
+                warning("Notifications are off. Bells ring while Impermanence is running, but not if iOS stops it.",
+                        systemImage: "bell.slash", openSettings: true)
+            } else if !engine.notificationSoundsOn {
+                warning("Notification sounds are off. Bells ring while Impermanence is running, but not if iOS stops it.",
+                        systemImage: "speaker.slash", openSettings: true)
+            } else if !engine.timeSensitiveOn {
+                warning("Time Sensitive notifications are off, so a Focus could hold back bells if iOS stops Impermanence.",
+                        systemImage: "moon", openSettings: true)
             }
-            if engine.outputVolume < 0.1 {
-                warning("Volume is very low. Turn it up to hear the bells.", systemImage: "speaker.slash")
+            if engine.outputVolume < 0.2 {
+                warning("Volume is very low. Turn it up to hear the bells.", systemImage: "speaker.wave.1", openSettings: false)
+            }
+            if engine.usingHeadphones {
+                HeadphonesNotice()
             }
         }
     }
 
     @ViewBuilder
-    private func warning(_ text: String, systemImage: String) -> some View {
+    private func warning(_ text: String, systemImage: String, openSettings: Bool) -> some View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: systemImage)
             VStack(alignment: .leading, spacing: 4) {
                 Text(text).font(.footnote)
-                if systemImage == "bell.slash" {
+                if openSettings {
                     Button("Open Settings") {
-                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                        if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
                             UIApplication.shared.open(url)
                         }
                     }
@@ -252,5 +270,32 @@ struct BellWarningsView: View {
 struct DayActiveView_Previews: PreviewProvider {
     static var previews: some View {
         DayActiveView(day: .constant(Day.fullDay))
+    }
+}
+
+/// A small headphones icon while bells play in headphones. Tapping it says
+/// what that means (docs/BEHAVIOR.md 1.4).
+struct HeadphonesNotice: View {
+    @State private var isExplaining = false
+
+    var body: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.2)) { isExplaining.toggle() }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "headphones")
+                if isExplaining {
+                    Text("Bells play only in the headphones.")
+                        .font(.footnote)
+                }
+            }
+            .font(.footnote.weight(.semibold))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(.thinMaterial, in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Bells play only in the headphones")
+        .accessibilityIdentifier("headphonesNotice")
     }
 }

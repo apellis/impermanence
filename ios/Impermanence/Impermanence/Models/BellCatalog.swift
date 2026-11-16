@@ -10,6 +10,16 @@ struct BellSound: Identifiable, Hashable {
 
     var displayName: String { name }
 
+    /// The sound a backup notification plays for `chimes` strikes 3 s apart
+    /// (1...ChimePlanner.chimesPerNotification), mixed into one file of at
+    /// most 30 s by scripts/make_bell_sounds.py.
+    func notificationFileName(chimes: Int) -> String {
+        guard chimes > 1 else { return fileName }
+        let base = (fileName as NSString).deletingPathExtension
+        let ext = (fileName as NSString).pathExtension
+        return "\(base)_x\(min(chimes, ChimePlanner.chimesPerNotification)).\(ext)"
+    }
+
     var url: URL? {
         let base = (fileName as NSString).deletingPathExtension
         let ext = (fileName as NSString).pathExtension

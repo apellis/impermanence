@@ -10,39 +10,69 @@ import SwiftUI
 @MainActor
 class DayStore: ObservableObject {
     @Published var days: [Day] = []
+    /// A saved days file that couldn't be read. It is kept, untouched, so the
+    /// user can save it somewhere; the app starts with an empty list.
+    @Published var unreadableFile: URL?
     private static let defaultDays: [Day] = [Day.openingDay, Day.fullDay]
 
+    struct UnreadableDaysError: LocalizedError {
+        var errorDescription: String? {
+            "Your saved days couldn't be read. A copy of the file was kept, so nothing is lost. You can save it and send it for help."
+        }
+    }
+
+    private static func documents() throws -> URL {
+        try FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+    }
+
     private static func fileURL() throws -> URL {
-        try FileManager.default.url(for: .documentDirectory,
-                                    in: .userDomainMask,
-                                    appropriateFor: nil,
-                                    create: false)
-        .appendingPathComponent("days.data")
+        try documents().appendingPathComponent("days.data")
     }
 
     func load() async throws {
-        let task = Task<[Day], Error> {
-            if ProcessInfo.processInfo.arguments.contains("--uitesting-reset-days") {
-                return Self.defaultDays
-            }
-            let fileURL = try Self.fileURL()
-            guard let data = try? Data(contentsOf: fileURL) else {
-                return Self.defaultDays
-            }
-            let days = try JSONDecoder().decode([Day].self, from: data)
-            return days
+        let arguments = ProcessInfo.processInfo.arguments
+        if BellEngine.isUITesting, arguments.contains("--uitesting-reset-days") {
+            days = Self.uiTestDays(startSoon: arguments.contains("--uitesting-days-start-soon"))
+            return
         }
-        let days = try await task.value
-        self.days = days
+        let fileURL = try Self.fileURL()
+        guard FileManager.default.fileExists(atPath: fileURL.path) else {
+            days = Self.defaultDays
+            return
+        }
+        do {
+            let data = try Data(contentsOf: fileURL)
+            days = try JSONDecoder().decode([Day].self, from: data)
+        } catch {
+            // Keep the unreadable file under another name before anything can
+            // be saved over days.data.
+            let stamp = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-")
+            let copy = try Self.documents().appendingPathComponent("days-unreadable-\(stamp).data")
+            try? FileManager.default.copyItem(at: fileURL, to: copy)
+            unreadableFile = FileManager.default.fileExists(atPath: copy.path) ? copy : fileURL
+            // `days` stays empty; it isn't assigned, so nothing is saved
+            // until the user changes something.
+            throw UnreadableDaysError()
+        }
     }
 
     func save(days: [Day]) async throws {
-        let task = Task {
-            let data = try JSONEncoder().encode(days)
-            let outfile = try Self.fileURL()
-            try data.write(to: outfile)
+        let data = try JSONEncoder().encode(days)
+        let outfile = try Self.fileURL()
+        // Atomic: a kill mid-write leaves the previous file, never half a file.
+        try data.write(to: outfile, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+    }
+
+    /// UI tests: the seed days, optionally starting 5 minutes from now so
+    /// their first bells fall inside the backup notification horizon.
+    private static func uiTestDays(startSoon: Bool) -> [Day] {
+        guard startSoon else { return defaultDays }
+        let soon = Calendar.current.dateComponents([.hour, .minute], from: Date().addingTimeInterval(300))
+        return defaultDays.map { day in
+            var d = day
+            d.startTime = TimeInterval((soon.hour ?? 0) * 3600 + (soon.minute ?? 0) * 60)
+            return d
         }
-        _ = try await task.value
     }
 }
 
@@ -101,7 +131,34 @@ enum PortableDayPlanCodec {
         return try encoder.encode(payload)
     }
 
+    static let maxFileBytes = 1_000_000
+    static let maxDays = 200
+    static let maxSegmentsPerDay = 500
+    static let maxNameLength = 200
+
+    enum ImportError: LocalizedError, Equatable {
+        case tooLarge, noDays, tooManyDays, dayHasNoSegments(String), tooManySegments(String), unreadable
+
+        var errorDescription: String? {
+            switch self {
+            case .tooLarge: return "The file is larger than 1 MB, so it isn't a day plan file."
+            case .noDays: return "The file has no days. Your days were not changed."
+            case .tooManyDays: return "The file has more than \(PortableDayPlanCodec.maxDays) days."
+            case .dayHasNoSegments(let name): return "\"\(name)\" has no segments. Every day needs at least one."
+            case .tooManySegments(let name): return "\"\(name)\" has more than \(PortableDayPlanCodec.maxSegmentsPerDay) segments."
+            case .unreadable: return "The file isn't an Impermanence day plan."
+            }
+        }
+    }
+
+    /// Reads an exported file (or the iOS native array) and checks it
+    /// against docs/BEHAVIOR.md before it may replace the user's days.
     static func importDays(from data: Data) throws -> [Day] {
+        guard data.count <= maxFileBytes else { throw ImportError.tooLarge }
+        return try validated(decode(data))
+    }
+
+    private static func decode(_ data: Data) throws -> [Day] {
         let decoder = JSONDecoder()
 
         if let envelope = try? decoder.decode(FileEnvelope.self, from: data) {
@@ -114,7 +171,7 @@ enum PortableDayPlanCodec {
                         Day.Segment(
                             id: UUID(uuidString: segment.id) ?? UUID(),
                             name: segment.name,
-                            duration: TimeInterval(max(1, segment.durationSeconds)),
+                            duration: TimeInterval(segment.durationSeconds),
                             customEndBell: segment.customEndBell?.sanitized()
                         )
                     },
@@ -130,7 +187,41 @@ enum PortableDayPlanCodec {
             return nativeDays
         }
 
-        throw CocoaError(.fileReadCorruptFile)
+        throw ImportError.unreadable
+    }
+
+    /// Refuses what can't be fixed (no days, a day with no segments, too
+    /// many of either) and fixes the rest: names are trimmed and given if
+    /// missing, durations are kept to 1 s ... 24 h, and repeated ids get
+    /// new ones (navigation finds days by id).
+    static func validated(_ days: [Day]) throws -> [Day] {
+        guard !days.isEmpty else { throw ImportError.noDays }
+        guard days.count <= maxDays else { throw ImportError.tooManyDays }
+        var dayIDs = Set<UUID>()
+        var segmentIDs = Set<UUID>()
+        return try days.enumerated().map { index, original in
+            var day = original
+            day.name = String(day.name.trimmingCharacters(in: .whitespacesAndNewlines).prefix(maxNameLength))
+            if day.name.isEmpty { day.name = "Day \(index + 1)" }
+            guard !day.segments.isEmpty else { throw ImportError.dayHasNoSegments(day.name) }
+            guard day.segments.count <= maxSegmentsPerDay else { throw ImportError.tooManySegments(day.name) }
+            if !dayIDs.insert(day.id).inserted {
+                day = Day(id: UUID(), name: day.name, startTime: day.startTime, segments: day.segments,
+                          startBell: day.startBell, manualBell: day.manualBell, defaultBell: day.defaultBell, theme: day.theme)
+            }
+            day.segments = day.segments.map { original in
+                var segment = original
+                segment.name = String(segment.name.prefix(maxNameLength))
+                if !segment.duration.isFinite || segment.duration < TimeInterval(SegmentDuration.minSeconds) {
+                    segment.duration = TimeInterval(SegmentDuration.minSeconds)
+                } else if segment.duration > TimeInterval(SegmentDuration.maxSeconds) {
+                    segment.duration = TimeInterval(SegmentDuration.maxSeconds)
+                }
+                if !segmentIDs.insert(segment.id).inserted { segment.id = UUID() }
+                return segment
+            }
+            return day
+        }
     }
 
     private static func normalizedSeconds(from startTime: TimeInterval) -> Int {

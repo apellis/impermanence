@@ -102,8 +102,10 @@ it should and never when it shouldn't.
 - Bells are **just sounds**. They don't fill the notification list.
   Android's only notification is the ongoing timer notification, with Stop.
   iOS keeps a backup notification for each bell in the next 2 hours. It
-  fires only if iOS has stopped the app, plays only its sound when the app is
-  in front, and is cleared from the notification list afterwards.
+  fires only if iOS has stopped the app or holds its audio (for example during
+  a phone call, when iOS's own notification sound is the only way a bell can
+  sound), plays only its sound when the app is in front, and is cleared from
+  the notification list afterwards.
 - While headphones or a Bluetooth audio device are connected, the timing
   screens show a small headphones icon, so it's clear where bells will sound.
   On iOS bells play only in the headphones; Android's alarm stream also plays
@@ -122,10 +124,10 @@ meaning. Layout and navigation follow each platform's conventions.
 | Area | Expected behavior |
 | --- | --- |
 | Seed data | First launch creates "Opening Day" (18:00, 5 segments, orange) and "Full Day" (07:00, 22 segments, poppy). |
-| Days list | Shows each day's name and time range in its theme color; reorder and delete. |
+| Days list | Shows each day's name and time range in its theme color; reorder and delete. Deleting asks "Delete “<name>”?" first. An empty list says "No days yet. Tap New Day to begin." |
 | Day detail | Start time and end time, theme, segments with times and chime counts, "Start or Resume Day", Edit. |
 | Active day | An "End Day" button ends timing, like leaving the screen. Ending is cheap: bells are tied to clock times, so starting the same day again resumes it with no confirmation. Status (Empty, Day queued, Now, Complete), current segment, time remaining, next bell time, schedule with the current segment highlighted, manual bell ("Ring now", sound, chimes). |
-| Editing | Name, start time, theme, default bell (which also sets the start and manual bells), segments (name, duration as minutes and seconds, custom or default bell; move, duplicate, delete). New segments: 15 min. A day needs a name and at least one segment. |
+| Editing | Name, start time, theme, default bell (which also sets the start and manual bells), segments (name, duration as minutes and seconds, custom or default bell; move, duplicate, delete). New segments: 15 min. A day needs a name and at least one segment; Add/Done stay disabled until it has both. Leaving the editor with unsaved changes asks "Discard changes?" first. |
 | Settings | 24-hour clock (off), Loop days at midnight (on), Keep screen awake during active day (on), Import/Export Days. |
 | Keep screen awake | While a day is queued or running, if the setting is on. |
 | Import/export | Import first asks "Replace all days?", because it replaces every day. JSON `{ "version": 1, "days": [ ... ] }` with integer seconds (see `docs/fixtures/*.json` `day` for one day). File name `impermanence-days-YYYY-MM-DD.json`. Import also accepts the iOS native array. Unknown themes become teal; bells are clamped to valid values. |
