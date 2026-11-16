@@ -33,7 +33,7 @@ The iOS app is the reference implementation. Read the root `CLAUDE.md` and
   wrong on DST days.
 * Bell sounds are `.caf`, under 30 s, so notifications can use them.
 * UI tests launch with `--uitesting`. That shows a `bellEngineStatus` label
-  ("day|quicksit|idle pending=N") that tests read to check the engine's state.
+  ("day|quicksit|idle pending=N live=N", live being Lock Screen Live Activities) that tests read to check the engine's state.
 * `Info.plist` holds only `UIBackgroundModes` (audio); other keys are generated
   from build settings. `Impermanence.entitlements` holds Time Sensitive
   Notifications. Critical Alerts would need Apple's approval first.

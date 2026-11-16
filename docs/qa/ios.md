@@ -37,6 +37,12 @@ time shown.
   bells still ring on time.
 * **BOFF-3** After the bells, unlock. The notification list holds no bell
   notifications.
+* **BOFF-4** While a day is being timed, the lock screen shows the day, the
+  current segment and a live countdown to the next bell. It updates when the
+  segment changes and disappears as soon as timing ends.
+* **BOFF-7-ios** On an iPhone with a Dynamic Island, the bell and countdown
+  show there while the app is in the background; touch and hold it to see the
+  segment and next bell time.
 
 ## Silent, Do Not Disturb and Focus
 
@@ -69,6 +75,9 @@ time shown.
 * **QS-3** Cancel during a sit ends it, and no end bell rings later.
 * **QS-4** A running sit can't be dismissed by accident (swipe down on iOS,
   back on Android).
+* **QS-5** While a Quick Sit runs, the lock screen shows "Quick Sit" and a
+  live "Time remaining" countdown. It disappears when the sit ends or is
+  cancelled.
 
 ## Days and editor
 
@@ -80,7 +89,8 @@ time shown.
   deleted.
 * **EDIT-4** Leaving the editor with changes asks "Discard changes?". "Keep
   Editing" keeps them, and Discard drops them.
-* **EDIT-5** Deleting a day asks "Delete “name”?" first.
+* **EDIT-5** Deleting a day removes it at once and shows "“name” deleted" with
+  Undo for 5 seconds. Undo puts it back in the same place.
 * **EDIT-6** The default bell also sets the start bell and the manual bell.
 * **EDIT-7-ios** Swipe right on a segment to duplicate it, swipe left
   to delete it, and use Edit to reorder.
@@ -89,6 +99,8 @@ time shown.
   the drop every segment's times are correct.
 * **EDIT-9** With VoiceOver or TalkBack on, the "Move up" and "Move down"
   actions on a segment row move it one place and announce its new position.
+* **EDIT-11** Deleting a segment shows "“name” deleted" with Undo for 5
+  seconds. Undo puts it back in the same position.
 
 ## Import and export
 

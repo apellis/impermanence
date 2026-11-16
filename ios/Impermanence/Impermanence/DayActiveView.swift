@@ -12,6 +12,7 @@ struct DayActiveView: View {
     @Binding var day: Day
     @StateObject private var dayTimer: DayTimer
     @ObservedObject private var engine = BellEngine.shared
+    @Environment(\.scenePhase) private var scenePhase
 
     @AppStorage("loopDays") private var loopDaysSetting = true
     @AppStorage("use24HourClock") private var use24HourClock = false
@@ -111,6 +112,11 @@ struct DayActiveView: View {
             dayTimer.stop()
             engine.endSession()
             UIApplication.shared.isIdleTimerDisabled = false
+        }
+        .onChange(of: scenePhase) { phase in
+            // The display needs no updates while nobody can see it. Bells
+            // don't depend on this timer: BellEngine keeps its own.
+            if phase == .active { dayTimer.start() } else { dayTimer.stop() }
         }
         .onChange(of: loopDaysSetting) { newValue in
             dayTimer.loopDays = newValue

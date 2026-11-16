@@ -112,6 +112,19 @@ final class ImpermanenceUITests: XCTestCase {
                       "bells still scheduled after leaving: \(status(app))")
     }
 
+    func testLockScreenActivityShowsWhileTimingAndEndsWithTheDay() throws {
+        let app = launchApp()
+        openSeedDay(in: app)
+        app.buttons["Start or Resume Day"].tap()
+        allowNotificationsIfAsked()
+        XCTAssertTrue(waitForLiveActivities(app, timeout: 10) { $0 == 1 },
+                      "no Lock Screen activity while timing: \(status(app))")
+
+        app.buttons["End Day"].tap()
+        XCTAssertTrue(waitForLiveActivities(app, timeout: 10) { $0 == 0 },
+                      "Lock Screen activity left after leaving: \(status(app))")
+    }
+
     func testQuickSitCancelStopsBells() throws {
         let app = launchApp()
         app.buttons["Quick Sit"].tap()
@@ -243,6 +256,49 @@ final class ImpermanenceUITests: XCTestCase {
                       after.map(\.label).joined(separator: " | "))
     }
 
+    func testDeletingASegmentCanBeUndone() throws {
+        let app = launchApp()
+        openSegmentEditor(in: app)
+        let rows = segmentRows(app)
+        XCTAssertEqual(rows.count, 5)
+        rows[2].swipeLeft()
+        let delete = app.buttons["Delete"]
+        XCTAssertTrue(delete.waitForExistence(timeout: 3))
+        delete.tap()
+
+        XCTAssertTrue(app.staticTexts["\u{201C}Dharma Talk\u{201D} deleted"].waitForExistence(timeout: 3))
+        XCTAssertEqual(segmentRows(app).count, 4)
+        app.buttons["Undo"].tap()
+        let after = segmentRows(app)
+        XCTAssertEqual(after.count, 5)
+        XCTAssertTrue(after[2].label.hasPrefix("Dharma Talk"), after.map(\.label).joined(separator: " | "))
+    }
+
+    func testDeletingADayCanBeUndone() throws {
+        let app = launchApp()
+        let day = app.staticTexts["Opening Day"]
+        XCTAssertTrue(day.waitForExistence(timeout: 5))
+        day.swipeLeft()
+        let delete = app.buttons["Delete"]
+        XCTAssertTrue(delete.waitForExistence(timeout: 3))
+        delete.tap()
+
+        XCTAssertTrue(app.staticTexts["\u{201C}Opening Day\u{201D} deleted"].waitForExistence(timeout: 3),
+                      "no undo toast")
+        XCTAssertFalse(app.staticTexts["Opening Day"].exists)
+        app.buttons["Undo"].tap()
+        XCTAssertTrue(app.staticTexts["Opening Day"].waitForExistence(timeout: 3))
+
+        // Without Undo the toast goes away by itself after a few seconds.
+        app.staticTexts["Opening Day"].swipeLeft()
+        XCTAssertTrue(app.buttons["Delete"].waitForExistence(timeout: 3))
+        app.buttons["Delete"].tap()
+        XCTAssertTrue(app.buttons["Undo"].waitForExistence(timeout: 3))
+        let gone = NSPredicate(format: "exists == false")
+        expectation(for: gone, evaluatedWith: app.buttons["Undo"])
+        waitForExpectations(timeout: 10)
+    }
+
     private func launchApp(keepSession: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += ["--uitesting-reset-days", "--uitesting-days-start-soon", "--uitesting"]
@@ -288,7 +344,21 @@ final class ImpermanenceUITests: XCTestCase {
         let deadline = Date().addingTimeInterval(timeout)
         repeat {
             let s = status(app)
-            if s.hasPrefix(prefix), let n = Int(s.dropFirst(prefix.count)), check(n) {
+            if s.hasPrefix(prefix), let n = Int(s.dropFirst(prefix.count).prefix(while: \.isNumber)), check(n) {
+                return true
+            }
+            Thread.sleep(forTimeInterval: 0.5)
+        } while Date() < deadline
+        return false
+    }
+
+    /// The "live=N" part of the status: Live Activities on the Lock Screen.
+    private func waitForLiveActivities(_ app: XCUIApplication, timeout: TimeInterval,
+                                       _ check: (Int) -> Bool) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        repeat {
+            let s = status(app)
+            if let range = s.range(of: "live="), let n = Int(s[range.upperBound...].prefix(while: \.isNumber)), check(n) {
                 return true
             }
             Thread.sleep(forTimeInterval: 0.5)
