@@ -250,7 +250,8 @@ final class BellEngineTests: XCTestCase {
         notifications = FakeBellNotifications()
         let defaults = UserDefaults(suiteName: "BellEngineTests-\(UUID())")!
         let clock = self.clock
-        engine = BellEngine(audio: audio, notifications: notifications, defaults: defaults,
+        let state = BellStateFile(url: FileManager.default.temporaryDirectory.appendingPathComponent("bell-\(UUID()).json"))
+        engine = BellEngine(audio: audio, notifications: notifications, state: state, defaults: defaults,
                             clock: { clock.now }, observeSystem: false)
     }
 
@@ -323,6 +324,14 @@ final class BellEngineTests: XCTestCase {
         XCTAssertTrue(engine.audioInterrupted)
     }
 
+    func testSessionStateIsKeptOutOfDeviceBackups() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("bell-\(UUID()).json")
+        let file = BellStateFile(url: url)
+        file.save(.init(session: nil, handled: ["a"]))
+        XCTAssertEqual(file.load()?.handled, ["a"])
+        XCTAssertEqual(try url.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup, true)
+    }
+
     func testEndingTheSessionClearsEverything() {
         _ = engine.startQuickSit(minutes: 10, soundId: 0, startChimes: 1, endChimes: 1)
         notifications.delivered = ["x"]
@@ -345,5 +354,44 @@ final class BellEngineTests: XCTestCase {
         // next, at +2 h 10 s, is just past the horizon.
         XCTAssertEqual(notifications.pending.count, 2)
         XCTAssertTrue(notifications.pending.values.allSatisfy { $0.fireIn <= ChimePlanner.notificationHorizon })
+    }
+}
+
+final class ImportValidationTests: XCTestCase {
+    private func data(_ days: [Day]) throws -> Data { try JSONEncoder().encode(days) }
+
+    func testRefusesAFileWithNoDays() throws {
+        XCTAssertThrowsError(try PortableDayPlanCodec.importDays(from: data([]))) {
+            XCTAssertEqual($0 as? PortableDayPlanCodec.ImportError, .noDays)
+        }
+    }
+
+    func testRefusesADayWithNoSegments() throws {
+        XCTAssertThrowsError(try PortableDayPlanCodec.importDays(from: data([Day(name: "Empty", startTime: 0, segments: [])])))
+    }
+
+    func testRefusesHugeFiles() {
+        XCTAssertThrowsError(try PortableDayPlanCodec.importDays(from: Data(count: PortableDayPlanCodec.maxFileBytes + 1))) {
+            XCTAssertEqual($0 as? PortableDayPlanCodec.ImportError, .tooLarge)
+        }
+    }
+
+    func testFixesNamesDurationsAndRepeatedIDs() throws {
+        let segment = Day.Segment(name: "s", duration: 200_000)
+        let day = Day(name: "   ", startTime: 0, segments: [segment, segment])
+        let imported = try PortableDayPlanCodec.importDays(from: data([day, day]))
+        XCTAssertEqual(imported.map(\.name), ["Day 1", "Day 2"])
+        XCTAssertNotEqual(imported[0].id, imported[1].id)
+        let segmentIDs = imported.flatMap { $0.segments.map(\.id) }
+        XCTAssertEqual(Set(segmentIDs).count, 4)
+        XCTAssertTrue(imported.flatMap(\.segments).allSatisfy { $0.duration == 86_400 })
+    }
+
+    func testKeepsSecondsAsGiven() throws {
+        let day = Day(name: "Seconds", startTime: 9 * 3600 + 30, segments: [Day.Segment(name: "a", duration: 135)])
+        let exported = try PortableDayPlanCodec.exportData(days: [day])
+        let imported = try PortableDayPlanCodec.importDays(from: exported)
+        XCTAssertEqual(imported.first?.segments.first?.duration, 135)
+        XCTAssertEqual(imported.first?.startTime, 9 * 3600 + 30)
     }
 }

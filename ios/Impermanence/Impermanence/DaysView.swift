@@ -82,7 +82,7 @@ struct DaysView: View {
                 QuickSitSheet(isPresented: $isPresentingQuickSit)
             }
             .onChange(of: scenePhase) { phase in
-                if phase == .inactive { saveAction() }
+                if phase != .active { saveAction() }
             }
             .onReceive(engine.$resumedSession.compactMap { $0 }) { resumed in
                 // iOS ended the app while a day or Quick Sit was being timed:

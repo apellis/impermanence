@@ -89,7 +89,7 @@ protocol BellNotificationScheduler: AnyObject {
 @MainActor
 final class BellEngine: NSObject, ObservableObject {
     static let shared = BellEngine(audio: SystemBellAudio(), notifications: SystemBellNotifications(),
-                                   defaults: .standard, clock: { .now }, observeSystem: true)
+                                   state: .standard, defaults: .standard, clock: { .now }, observeSystem: true)
 
     /// The running session, if any.
     @Published private(set) var session: TimingSession?
@@ -119,6 +119,7 @@ final class BellEngine: NSObject, ObservableObject {
 
     private let audio: BellAudioOutput
     private let notifications: BellNotificationScheduler
+    private let state: BellStateFile
     private let defaults: UserDefaults
     private let clock: () -> Date
     private let calendar = Calendar.autoupdatingCurrent
@@ -131,13 +132,15 @@ final class BellEngine: NSObject, ObservableObject {
     private var observers: [NSObjectProtocol] = []
     private var volumeObservation: NSKeyValueObservation?
 
-    private static let sessionKey = "BellEngine.session"
-    private static let handledKey = "BellEngine.handledChimes"
+    /// Where versions before 1.5 kept the session; read once, then removed.
+    private static let legacySessionKey = "BellEngine.session"
+    private static let legacyHandledKey = "BellEngine.handledChimes"
     static let notificationPrefix = "impermanence.chime."
     private static let tickInterval: TimeInterval = 0.25
 
     init(audio: BellAudioOutput, notifications: BellNotificationScheduler,
-         defaults: UserDefaults, clock: @escaping () -> Date, observeSystem: Bool) {
+         state: BellStateFile, defaults: UserDefaults, clock: @escaping () -> Date, observeSystem: Bool) {
+        self.state = state
         self.audio = audio
         self.notifications = notifications
         self.defaults = defaults
@@ -214,8 +217,8 @@ final class BellEngine: NSObject, ObservableObject {
             persistSession(nil)
         }
         let now = clock()
-        guard let data = defaults.data(forKey: Self.sessionKey),
-              let saved = try? JSONDecoder().decode(TimingSession.self, from: data),
+        let stored = loadStoredState()
+        guard let saved = stored.session,
               !(day(for: saved) == nil && saved.isDay),
               !saved.isFinished(at: now, day: day(for: saved), calendar: calendar) else {
             persistSession(nil)
@@ -224,7 +227,7 @@ final class BellEngine: NSObject, ObservableObject {
         }
         // Bells the backup already rang while the process was gone must not
         // ring again as a catch-up.
-        var alreadyRung = Set(defaults.stringArray(forKey: Self.handledKey) ?? [])
+        var alreadyRung = Set(stored.handled)
         alreadyRung.formUnion(await deliveredChimeIDs())
         notifications.removeAllDelivered()
         begin(saved, handled: alreadyRung)
@@ -483,16 +486,23 @@ final class BellEngine: NSObject, ObservableObject {
     private func persistSession() { persistSession(session) }
 
     private func persistSession(_ value: TimingSession?) {
-        if let value, let data = try? JSONEncoder().encode(value) {
-            defaults.set(data, forKey: Self.sessionKey)
-        } else {
-            defaults.removeObject(forKey: Self.sessionKey)
-        }
+        state.save(.init(session: value, handled: value == nil ? [] : Array(handled)))
     }
 
     private func persistHandled() {
-        defaults.set(Array(handled), forKey: Self.handledKey)
+        state.save(.init(session: session, handled: Array(handled)))
         lastPersistedHandled = handled
+    }
+
+    private func loadStoredState() -> BellStateFile.State {
+        if let stored = state.load() { return stored }
+        // Migrate a session saved by an earlier version.
+        defer {
+            defaults.removeObject(forKey: Self.legacySessionKey)
+            defaults.removeObject(forKey: Self.legacyHandledKey)
+        }
+        let session = defaults.data(forKey: Self.legacySessionKey).flatMap { try? JSONDecoder().decode(TimingSession.self, from: $0) }
+        return .init(session: session, handled: defaults.stringArray(forKey: Self.legacyHandledKey) ?? [])
     }
 
     // MARK: - System events
@@ -559,6 +569,49 @@ private extension TimingSession {
     var isDay: Bool {
         if case .day = self { return true }
         return false
+    }
+}
+
+// MARK: - Session state
+
+/// The running session and the chimes already handled, in a file that is
+/// excluded from device backups, so a session is never restored onto
+/// another device (docs/BEHAVIOR.md, Backup).
+final class BellStateFile {
+    struct State: Codable, Equatable {
+        var session: TimingSession?
+        var handled: [String]
+    }
+
+    let url: URL
+
+    init(url: URL) {
+        self.url = url
+    }
+
+    static var standard: BellStateFile {
+        let support = (try? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask,
+                                                    appropriateFor: nil, create: true))
+            ?? FileManager.default.temporaryDirectory
+        return BellStateFile(url: support.appendingPathComponent("bell-session.json"))
+    }
+
+    func load() -> State? {
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        return try? JSONDecoder().decode(State.self, from: data)
+    }
+
+    func save(_ state: State) {
+        guard let data = try? JSONEncoder().encode(state) else { return }
+        do {
+            try data.write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+            var values = URLResourceValues()
+            values.isExcludedFromBackup = true
+            var target = url
+            try target.setResourceValues(values)
+        } catch {
+            NSLog("BellEngine: couldn't save session state: \(error)")
+        }
     }
 }
 

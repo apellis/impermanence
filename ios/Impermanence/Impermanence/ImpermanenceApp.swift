@@ -8,6 +8,7 @@
 import SwiftUI
 import UIKit
 import UserNotifications
+import UniformTypeIdentifiers
 
 final class AppDelegate: NSObject, UIApplicationDelegate {
     private let notificationPresenter = BellNotificationPresenter()
@@ -32,6 +33,7 @@ struct ImpermanenceApp : App {
     @StateObject private var store = DayStore()
     @State private var persistenceErrorMessage: String?
     @State private var pendingSaveTask: Task<Void, Never>?
+    @State private var isExportingUnreadableFile = false
 
     var body: some Scene {
         WindowGroup {
@@ -48,6 +50,12 @@ struct ImpermanenceApp : App {
                 .alert("Unable to Access Saved Data",
                        isPresented: isShowingPersistenceError,
                        actions: {
+                           if store.unreadableFile != nil {
+                               Button("Save a Copy") {
+                                   persistenceErrorMessage = nil
+                                   isExportingUnreadableFile = true
+                               }
+                           }
                            Button("OK", role: .cancel) {
                                persistenceErrorMessage = nil
                            }
@@ -55,6 +63,10 @@ struct ImpermanenceApp : App {
                        message: {
                            Text(persistenceErrorMessage ?? "An unknown error occurred.")
                        })
+                .fileExporter(isPresented: $isExportingUnreadableFile,
+                              document: RawFileDocument(url: store.unreadableFile),
+                              contentType: .data,
+                              defaultFilename: "impermanence-unreadable-days") { _ in }
         }
     }
 
@@ -73,7 +85,7 @@ struct ImpermanenceApp : App {
         do {
             try await store.load()
         } catch {
-            persistenceErrorMessage = "Failed to load saved days. \(error.localizedDescription)"
+            persistenceErrorMessage = error.localizedDescription
         }
         let store = self.store
         BellEngine.shared.dayProvider = { id in store.days.first { $0.id == id } }
@@ -81,6 +93,9 @@ struct ImpermanenceApp : App {
     }
 
     private func saveDays() {
+        // After an unreadable file, nothing is saved until the user adds a
+        // day (the unreadable file is kept as a copy either way).
+        if store.unreadableFile != nil && store.days.isEmpty { return }
         let snapshot = store.days
         Task {
             do {
@@ -98,5 +113,23 @@ struct ImpermanenceApp : App {
             guard !Task.isCancelled else { return }
             saveDays()
         }
+    }
+}
+
+/// The bytes of a file, for "Save a Copy" of an unreadable days file.
+struct RawFileDocument: FileDocument {
+    static var readableContentTypes: [UTType] { [.data] }
+    var data: Data
+
+    init(url: URL?) {
+        data = url.flatMap { try? Data(contentsOf: $0) } ?? Data()
+    }
+
+    init(configuration: ReadConfiguration) throws {
+        data = configuration.file.regularFileContents ?? Data()
+    }
+
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+        FileWrapper(regularFileWithContents: data)
     }
 }

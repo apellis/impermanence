@@ -97,6 +97,8 @@ struct SettingsView: View {
                             url.stopAccessingSecurityScopedResource()
                         }
                     }
+                    let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+                    guard size <= PortableDayPlanCodec.maxFileBytes else { throw PortableDayPlanCodec.ImportError.tooLarge }
                     let data = try Data(contentsOf: url)
                     let importedDays = try PortableDayPlanCodec.importDays(from: data)
                     days = importedDays
@@ -145,6 +147,9 @@ struct SettingsView: View {
 
     private var exportFileName: String {
         let formatter = DateFormatter()
+        // Always Gregorian digits, whatever calendar the phone uses.
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "yyyy-MM-dd"
         return "impermanence-days-\(formatter.string(from: Date()))"
     }

@@ -224,7 +224,7 @@ struct BellWarningsView: View {
                 warning("Time Sensitive notifications are off, so a Focus could hold back bells if iOS stops Impermanence.",
                         systemImage: "moon", openSettings: true)
             }
-            if engine.outputVolume < 0.1 {
+            if engine.outputVolume < 0.2 {
                 warning("Volume is very low. Turn it up to hear the bells.", systemImage: "speaker.wave.1", openSettings: false)
             }
             if engine.usingHeadphones {
