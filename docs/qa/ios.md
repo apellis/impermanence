@@ -84,6 +84,11 @@ time shown.
 * **EDIT-6** The default bell also sets the start bell and the manual bell.
 * **EDIT-7-ios** Swipe right on a segment to duplicate it, swipe left
   to delete it, and use Edit to reorder.
+* **EDIT-8** Touch and hold a segment row, then drag it to a new place. The
+  other rows move aside, the list scrolls when you reach its edge, and after
+  the drop every segment's times are correct.
+* **EDIT-9** With VoiceOver or TalkBack on, the "Move up" and "Move down"
+  actions on a segment row move it one place and announce its new position.
 
 ## Import and export
 

@@ -82,7 +82,7 @@ struct DayDetailView: View {
                 .buttonStyle(.plain)
                 .listRowSeparator(.hidden)
 
-                Label("\(TimeFormatting.formattedTime(from: dayStartTime, use24HourClock: use24HourClock))–\(TimeFormatting.formattedTime(from: dayEndTime, use24HourClock: use24HourClock))", systemImage: "clock")
+                Label("\(TimeFormatting.formattedTime(from: schedules.first?.0 ?? day.startTimeAsDate, use24HourClock: use24HourClock))–\(TimeFormatting.formattedTime(from: schedules.last?.1 ?? day.startTimeAsDate, use24HourClock: use24HourClock))", systemImage: "clock")
                     .listRowSeparator(.hidden)
 
                 HStack {
@@ -125,14 +125,6 @@ struct DayDetailView: View {
                 isPresentingEditView = true
             }
         }
-    }
-
-    private var dayStartTime: Date {
-        day.segmentStartEndTimes.first?.0 ?? day.startTimeAsDate
-    }
-
-    private var dayEndTime: Date {
-        day.segmentStartEndTimes.last?.1 ?? day.startTimeAsDate
     }
 }
 

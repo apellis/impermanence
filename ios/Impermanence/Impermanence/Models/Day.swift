@@ -115,7 +115,7 @@ struct Day: Identifiable, Codable {
 }
 
 extension Day {
-    struct Segment: Identifiable, Codable {
+    struct Segment: Identifiable, Codable, Equatable {
         var id: UUID
         var name: String
         var duration: TimeInterval

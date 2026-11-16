@@ -185,6 +185,64 @@ final class ImpermanenceUITests: XCTestCase {
     /// Launches with the seed days. Unless `keepSession`, a bell session left
     /// by an earlier test (XCUITest kills the app between tests, which looks
     /// like iOS ending it, so the session would resume) is discarded.
+    // MARK: Segment editing
+
+    /// Opens the Opening Day editor (Sit, Walk, Dharma Talk, Walk, Sit).
+    private func openSegmentEditor(in app: XCUIApplication) {
+        openSeedDay(in: app)
+        let edit = app.navigationBars.buttons["Edit"]
+        XCTAssertTrue(edit.waitForExistence(timeout: 5))
+        edit.tap()
+        XCTAssertTrue(app.buttons.matching(identifier: "segmentRow").firstMatch.waitForExistence(timeout: 5))
+    }
+
+    /// Segment rows, top to bottom.
+    private func segmentRows(_ app: XCUIApplication) -> [XCUIElement] {
+        app.buttons.matching(identifier: "segmentRow").allElementsBoundByIndex
+            .filter { $0.exists && !$0.frame.isEmpty }
+            .sorted { $0.frame.minY < $1.frame.minY }
+    }
+
+    func testSegmentsReorderByDraggingWithoutEditMode() throws {
+        let app = launchApp()
+        openSegmentEditor(in: app)
+        var rows = segmentRows(app)
+        XCTAssertGreaterThanOrEqual(rows.count, 3)
+        XCTAssertTrue(rows[0].label.hasPrefix("Sit"), rows[0].label)
+        XCTAssertTrue(rows[2].label.hasPrefix("Dharma Talk"), rows[2].label)
+
+        // Touch and hold Dharma Talk, then drag it above the first row.
+        let from = rows[2].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        let to = rows[0].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1))
+        from.press(forDuration: 1.0, thenDragTo: to, withVelocity: .slow, thenHoldForDuration: 0.5)
+
+        let deadline = Date().addingTimeInterval(5)
+        repeat {
+            rows = segmentRows(app)
+            if rows.first?.label.hasPrefix("Dharma Talk") == true { break }
+            Thread.sleep(forTimeInterval: 0.25)
+        } while Date() < deadline
+        XCTAssertTrue(rows.first?.label.hasPrefix("Dharma Talk") == true,
+                      rows.map(\.label).joined(separator: " | "))
+        XCTAssertEqual(rows.count, 5, "dragging moves a segment, it doesn't add or drop one")
+    }
+
+    func testSwipeToDuplicateASegmentPutsTheCopyRightAfterIt() throws {
+        let app = launchApp()
+        openSegmentEditor(in: app)
+        let rows = segmentRows(app)
+        XCTAssertEqual(rows.count, 5)
+        rows[2].swipeRight()
+        let duplicate = app.buttons["Duplicate"]
+        XCTAssertTrue(duplicate.waitForExistence(timeout: 3))
+        duplicate.tap()
+
+        let after = segmentRows(app)
+        XCTAssertEqual(after.count, 6)
+        XCTAssertTrue(after[2].label.hasPrefix("Dharma Talk") && after[3].label.hasPrefix("Dharma Talk"),
+                      after.map(\.label).joined(separator: " | "))
+    }
+
     private func launchApp(keepSession: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += ["--uitesting-reset-days", "--uitesting-days-start-soon", "--uitesting"]

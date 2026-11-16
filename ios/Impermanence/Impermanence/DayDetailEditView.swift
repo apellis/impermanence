@@ -9,12 +9,15 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct DayDetailEditView: View {
     @Binding var day: Day
     @AppStorage("use24HourClock") private var use24HourClock = false
 
     var body: some View {
+        // One schedule per render, shared by the rows and the footer.
+        let schedules = Self.segmentSchedules(for: day)
         Form {
             Section(header: Text("Day Info")) {
                 TextField("Name", text: $day.name)
@@ -29,8 +32,9 @@ struct DayDetailEditView: View {
                         .font(.footnote)
                         .foregroundColor(.secondary)
                 }
-                let schedules = Self.segmentSchedules(for: day)
-                ForEach(day.segments) { segment in
+                // editActions: .move lets a row be dragged straight away
+                // (touch and hold, then drag), with no Edit mode needed.
+                ForEach($day.segments, editActions: .move) { $segment in
                     NavigationLink {
                         SegmentEditorView(day: $day, segmentID: segment.id)
                     } label: {
@@ -38,6 +42,16 @@ struct DayDetailEditView: View {
                                    schedule: schedules[segment.id],
                                    bell: segment.resolvedEndBell(defaultBell: day.defaultBell),
                                    use24HourClock: use24HourClock)
+                    }
+                    .accessibilityIdentifier("segmentRow")
+                    .swipeActions(edge: .trailing) {
+                        if day.segments.count > 1 {
+                            Button(role: .destructive) {
+                                deleteSegment(id: segment.id)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
                     }
                     .swipeActions(edge: .leading) {
                         Button {
@@ -47,14 +61,14 @@ struct DayDetailEditView: View {
                         }
                         .tint(.indigo)
                     }
+                    .accessibilityAction(named: "Move up") { moveSegment(id: segment.id, by: -1) }
+                    .accessibilityAction(named: "Move down") { moveSegment(id: segment.id, by: 1) }
+                    .accessibilityAction(named: "Duplicate") { duplicateSegment(id: segment.id) }
                 }
                 .onDelete { indices in
-                    // A day keeps at least one segment.
+                    // In Edit mode. A day keeps at least one segment.
                     guard day.segments.count - indices.count >= 1 else { return }
                     day.segments.remove(atOffsets: indices)
-                }
-                .onMove { from, to in
-                    day.segments.move(fromOffsets: from, toOffset: to)
                 }
                 .deleteDisabled(day.segments.count <= 1)
 
@@ -72,15 +86,37 @@ struct DayDetailEditView: View {
                     }
                 }
             } footer: {
-                if let first = Self.segmentSchedules(for: day)[day.segments.first?.id ?? UUID()],
-                   let last = Self.segmentSchedules(for: day)[day.segments.last?.id ?? UUID()] {
-                    Text("\(TimeFormatting.formattedTime(from: first.0, use24HourClock: use24HourClock)) – \(TimeFormatting.formattedTime(from: last.1, use24HourClock: use24HourClock)), \(SegmentDuration.shortText(last.1.timeIntervalSince(first.0)))")
+                if let first = day.segments.first.flatMap({ schedules[$0.id] }),
+                   let last = day.segments.last.flatMap({ schedules[$0.id] }) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("\(TimeFormatting.formattedTime(from: first.0, use24HourClock: use24HourClock)) – \(TimeFormatting.formattedTime(from: last.1, use24HourClock: use24HourClock)), \(SegmentDuration.shortText(last.1.timeIntervalSince(first.0)))")
+                        if day.segments.count > 1 {
+                            Text("Touch and hold a segment to drag it. Swipe for Duplicate and Delete.")
+                        }
+                    }
                 }
             }
         }
         .onChange(of: day.defaultBell) { newBell in
             day.startBell = newBell
             day.manualBell = newBell
+        }
+    }
+
+    private func moveSegment(id: UUID, by offset: Int) {
+        guard let index = day.segments.firstIndex(where: { $0.id == id }) else { return }
+        let target = index + offset
+        guard day.segments.indices.contains(target) else { return }
+        day.segments.swapAt(index, target)
+        let name = day.segments[target].name.isEmpty ? "Segment" : day.segments[target].name
+        UIAccessibility.post(notification: .announcement,
+                             argument: "\(name), position \(target + 1) of \(day.segments.count)")
+    }
+
+    private func deleteSegment(id: UUID) {
+        guard day.segments.count > 1, let index = day.segments.firstIndex(where: { $0.id == id }) else { return }
+        withAnimation {
+            _ = day.segments.remove(at: index)
         }
     }
 
