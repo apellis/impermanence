@@ -36,6 +36,7 @@ struct SettingsView: View {
     @AppStorage("loopDays") private var loopDays = true
     @AppStorage("keepScreenAwakeDuringActiveDay") private var keepScreenAwakeDuringActiveDay = true
     @State private var isPresentingImporter = false
+    @State private var isConfirmingImport = false
     @State private var isPresentingExporter = false
     @State private var transferMessage: String?
     @State private var transferTitle = "Data Transfer"
@@ -56,7 +57,15 @@ struct SettingsView: View {
                 }
                 Section {
                     Button("Import Days") {
-                        isPresentingImporter = true
+                        isConfirmingImport = true
+                    }
+                    .confirmationDialog("Replace all days?", isPresented: $isConfirmingImport, titleVisibility: .visible) {
+                        Button("Choose File", role: .destructive) {
+                            isPresentingImporter = true
+                        }
+                        Button("Cancel", role: .cancel) {}
+                    } message: {
+                        Text("Importing replaces all \(days.count) of your days with the days in the file.")
                     }
                     Button("Export Days") {
                         isPresentingExporter = true
