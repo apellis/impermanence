@@ -143,7 +143,8 @@ struct DayActiveView: View {
                         }
                     }
                 } label: {
-                    Image(systemName: "bell")
+                    Label("Manual bell controls", systemImage: "bell")
+                        .labelStyle(.iconOnly)
                 }
                 .accessibilityLabel("Manual bell controls")
             }

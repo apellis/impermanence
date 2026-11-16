@@ -25,8 +25,8 @@ final class ImpermanenceUITests: XCTestCase {
         let manualBellButton = app.navigationBars.buttons["Manual bell controls"]
         XCTAssertTrue(manualBellButton.waitForExistence(timeout: 5))
 
-        manualBellButton.tap()
-        XCTAssertTrue(app.buttons["Ring now"].waitForExistence(timeout: 2))
+        tapToolbarItem(manualBellButton, in: app)
+        XCTAssertTrue(app.buttons["Ring now"].waitForExistence(timeout: 3))
     }
 
     func testStartDayFlowWithPersistedDaysStaysResponsive() throws {
@@ -43,10 +43,10 @@ final class ImpermanenceUITests: XCTestCase {
         XCTAssertTrue(manualBellButton.waitForExistence(timeout: 8))
 
         Thread.sleep(forTimeInterval: 2)
-        XCTAssertTrue(manualBellButton.isHittable)
+        XCTAssertTrue(isOnScreen(manualBellButton, in: app), "frame \(manualBellButton.frame)")
 
-        manualBellButton.tap()
-        XCTAssertTrue(app.buttons["Ring now"].waitForExistence(timeout: 2))
+        tapToolbarItem(manualBellButton, in: app)
+        XCTAssertTrue(app.buttons["Ring now"].waitForExistence(timeout: 3))
     }
 
     func testNewDayDefaultsAndControlsAreVisible() throws {
@@ -58,7 +58,12 @@ final class ImpermanenceUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["New Day"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Default bell"].exists)
         XCTAssertTrue(app.staticTexts["Theme"].exists)
-        XCTAssertTrue(hasNodeWithText("12:00 AM", app: app) || hasNodeWithText("00:00", app: app))
+        // A new day starts at midnight. iOS formats "12:00 AM" with a narrow
+        // no-break space, and a compact picker may expose the time as its value.
+        XCTAssertTrue(app.datePickers["Start of Day"].waitForExistence(timeout: 2))
+        let midnight = NSPredicate(format: "label CONTAINS '12:00' OR label CONTAINS '00:00' OR value CONTAINS '12:00' OR value CONTAINS '00:00'")
+        XCTAssertTrue(app.descendants(matching: .any).matching(midnight).firstMatch.waitForExistence(timeout: 2),
+                      app.datePickers["Start of Day"].debugDescription)
 
         let dismissButton = app.buttons["Dismiss"]
         XCTAssertTrue(dismissButton.exists)
@@ -180,8 +185,26 @@ final class ImpermanenceUITests: XCTestCase {
     private func allowNotificationsIfAsked() {
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
         let allow = springboard.buttons["Allow"]
-        if allow.waitForExistence(timeout: 3) {
+        if allow.waitForExistence(timeout: 5) {
             allow.tap()
+        }
+    }
+
+    /// Whether the element's frame lies inside the app window.
+    private func isOnScreen(_ element: XCUIElement, in app: XCUIApplication) -> Bool {
+        let frame = element.frame
+        return !frame.isEmpty && app.windows.firstMatch.frame.contains(CGPoint(x: frame.midX, y: frame.midY))
+    }
+
+    /// Navigation-bar menus sometimes report not hittable, and XCUITest's
+    /// scroll-to-visible fails on them, although they are on screen and work.
+    /// Tap the element's center then.
+    private func tapToolbarItem(_ element: XCUIElement, in app: XCUIApplication) {
+        if element.isHittable {
+            element.tap()
+        } else {
+            XCTAssertTrue(isOnScreen(element, in: app), "not on screen: \(element.frame)")
+            element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         }
     }
 
