@@ -81,7 +81,14 @@ class SegmentReorderTest {
         composeRule.waitUntil(15_000) { has("Name") }
         composeRule.onNodeWithText("Name").performTextInput(name)
         composeRule.waitForIdle()
-        Espresso.pressBack()
+        // The first back would only hide the keyboard, so close it first; then back dismisses the sheet.
+        Espresso.closeSoftKeyboard()
+        repeat(2) {
+            if (has("Use day default bell")) {
+                Espresso.pressBack()
+                composeRule.waitForIdle()
+            }
+        }
         composeRule.waitUntil(15_000) { has(name) && !has("Use day default bell") }
     }
 
