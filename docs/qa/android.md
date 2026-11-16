@@ -1,8 +1,9 @@
 # Android standard QA checklist
 
 Run on a real Android phone with the minified release build installed
-(`./gradlew assembleRelease`, or the APK from CI), so the check also covers
-R8. Before you start, set up two test days with **New Day**:
+(`./gradlew installRelease` with the phone on USB), so the pass also covers
+R8. Until store signing is set up, the release build is signed with the debug
+key, so it installs over a debug build. Before you start, set up two test days with **New Day**:
 
 * **QA short**: starts 2 minutes from now, with three segments of 1 min,
   1 min 30 s and 45 s. Give the second segment a custom end bell of 3 chimes.
