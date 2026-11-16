@@ -37,7 +37,19 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+      - name: Check whether a profile is needed
+        id: need
+        # On a pull request, record only when the branch has no profile yet. Each recording differs a
+        # little, and the bot's commit doesn't re-run CI, so re-recording on every push would leave
+        # the branch's last commit untested. Run the workflow by hand to refresh it.
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ] && [ -f android/app/src/main/baseline-prof.txt ]; then
+            echo "run=false" >> "$GITHUB_OUTPUT"; echo "Profile already present; skipping."
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
       - name: Record the profile
+        if: steps.need.outputs.run == 'true'
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -49,6 +61,7 @@ jobs:
           working-directory: android
           script: ./gradlew --no-daemon :baselineprofile:connectedBenchmarkAndroidTest -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.enabledRules=BaselineProfile
       - name: Copy the profile into the app
+        if: steps.need.outputs.run == 'true'
         run: |
           profile=$(find android/baselineprofile/build/outputs -name '*-baseline-prof.txt' ! -name '*startup*' | head -n 1)
           if [ -z "$profile" ]; then
@@ -57,6 +70,7 @@ jobs:
           echo "Using $profile ($(wc -l < "$profile") rules)"
           cp "$profile" android/app/src/main/baseline-prof.txt
       - name: Commit the profile
+        if: steps.need.outputs.run == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -65,7 +79,7 @@ jobs:
           git commit -m "Android: update the startup profile"
           git push origin HEAD:${{ github.head_ref || github.ref_name }}
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && steps.need.outputs.run == 'true'
         with:
           name: baseline-profile
           path: android/baselineprofile/build/outputs/
