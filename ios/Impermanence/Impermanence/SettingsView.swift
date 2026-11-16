@@ -35,6 +35,7 @@ struct SettingsView: View {
     @AppStorage("use24HourClock") private var use24HourClock = false
     @AppStorage("loopDays") private var loopDays = true
     @AppStorage("keepScreenAwakeDuringActiveDay") private var keepScreenAwakeDuringActiveDay = true
+    @AppStorage(BellEngine.backupsWithoutTextKey) private var qaBackupsWithoutText = false
     @State private var isPresentingImporter = false
     @State private var isConfirmingImport = false
     @State private var isPresentingExporter = false
@@ -78,6 +79,15 @@ struct SettingsView: View {
                 Section {
                     NavigationLink("About Impermanence") { AboutView() }
                 }
+                #if DEBUG
+                Section {
+                    Toggle("Backup notifications without text", isOn: $qaBackupsWithoutText)
+                } header: {
+                    Text("QA (Debug builds only)")
+                } footer: {
+                    Text("Takes effect for the next session. See docs/qa/ios.md.")
+                }
+                #endif
             }
             .navigationTitle("Settings")
             .toolbar {
