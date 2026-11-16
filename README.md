@@ -2,6 +2,10 @@
 
 A timer for meditation retreats. Open source and freely available on the iOS App Store.
 
+## Development
+
+See [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) for the cloud environment, CI, and flashing physical test devices.
+
 ## iOS
 
 ### Status

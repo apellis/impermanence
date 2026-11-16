@@ -1,0 +1,31 @@
+name: iOS
+
+on:
+  push:
+    branches: [master]
+    paths: ["ios/**", "scripts/ios-*.sh", ".github/workflows/ios.yml"]
+  pull_request:
+    paths: ["ios/**", "scripts/ios-*.sh", ".github/workflows/ios.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build and test on iOS Simulator
+    # The repo is public, so GitHub-hosted macOS runners are free.
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show Xcode
+        run: xcodebuild -version
+      - name: Build and test (unit + UI tests)
+        run: scripts/ios-test.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-test-results
+          path: ios/Impermanence/build/TestResults.xcresult
