@@ -393,7 +393,8 @@ final class BellEngine: NSObject, ObservableObject {
                 if status == .notDetermined && requestIfNeeded {
                     let granted = (try? await center.requestAuthorization(options: [.alert, .sound, .criticalAlert])) ?? false
                     let after = await center.notificationSettings()
-                    self.applyNotificationSettings(allowed: granted, critical: after.criticalAlertSetting == .enabled)
+                    // Anything registered before the answer was refused: redo it.
+                    self.applyNotificationSettings(allowed: granted, critical: after.criticalAlertSetting == .enabled, force: true)
                 } else {
                     self.applyNotificationSettings(allowed: status == .authorized || status == .provisional || status == .ephemeral,
                                                    critical: critical)
@@ -402,8 +403,8 @@ final class BellEngine: NSObject, ObservableObject {
         }
     }
 
-    private func applyNotificationSettings(allowed: Bool, critical: Bool) {
-        let changed = allowed != notificationsAllowed || critical != criticalAlertsAllowed
+    private func applyNotificationSettings(allowed: Bool, critical: Bool, force: Bool = false) {
+        let changed = force || allowed != notificationsAllowed || critical != criticalAlertsAllowed
         notificationsAllowed = allowed
         criticalAlertsAllowed = critical
         if changed {
