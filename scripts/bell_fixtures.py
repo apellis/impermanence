@@ -81,22 +81,24 @@ def bell(rings=1, sound=0):
     return {"soundId": sound, "numRings": rings}
 
 
-def make_day(name, start_hms, minutes, start_bell=None, default_bell=None, custom=None, theme="teal"):
-    h, m = start_hms
+def make_day(name, start_hms, minutes, start_bell=None, default_bell=None, custom=None, theme="teal", seconds=None):
+    """minutes: segment lengths in whole minutes; or pass seconds= for lengths to the second."""
+    h, m, sec = (tuple(start_hms) + (0,))[:3]
+    durations = list(seconds) if seconds is not None else [mins * 60 for mins in minutes]
     custom = custom or {}
     seed = uuid.uuid5(uuid.NAMESPACE_URL, "impermanence-fixture/" + name)
     return {
         "id": str(seed).upper(),
         "name": name,
-        "startTimeSeconds": h * 3600 + m * 60,
+        "startTimeSeconds": h * 3600 + m * 60 + sec,
         "segments": [
             {
                 "id": str(uuid.uuid5(seed, str(i))).upper(),
                 "name": f"Segment {i + 1}",
-                "durationSeconds": mins * 60,
+                "durationSeconds": dur,
                 **({"customEndBell": custom[i]} if i in custom else {}),
             }
-            for i, mins in enumerate(minutes)
+            for i, dur in enumerate(durations)
         ],
         "startBell": start_bell or bell(),
         "manualBell": default_bell or bell(),
@@ -175,6 +177,9 @@ CASES = [
     dict(name="longer-than-a-day-loop", description="A 25-hour looping day: the next run's bells only ring after the previous run ends.",
          zone="America/New_York", loop=True, day=make_day("Marathon", (6, 0), [600, 600, 300]),
          start=local("America/New_York", 2026, 6, 10, 5, 0), until=local("America/New_York", 2026, 6, 12, 12, 0)),
+    dict(name="second-precision", description="Start 09:00:30 and segments of 1 s, 90 s and 2 min 15 s: every bell is on the exact second.",
+         zone="America/New_York", loop=False, day=make_day("Seconds", (9, 0, 30), None, seconds=[1, 90, 135]),
+         start=local("America/New_York", 2026, 6, 10, 9, 0), until=local("America/New_York", 2026, 6, 10, 10, 0)),
 ]
 
 

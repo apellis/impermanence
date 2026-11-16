@@ -41,7 +41,6 @@ import com.neversink.impermanence.ui.viewmodel.AppUiState
 @Composable
 fun DaysScreen(
     uiState: AppUiState,
-    paddingValues: PaddingValues,
     onDaySelected: (String) -> Unit,
     onQuickSit: () -> Unit,
     onSettings: () -> Unit,
@@ -77,8 +76,8 @@ fun DaysScreen(
         }
     ) { innerPadding ->
         val contentPadding = PaddingValues(
-            top = innerPadding.calculateTopPadding() + paddingValues.calculateTopPadding(),
-            bottom = innerPadding.calculateBottomPadding() + paddingValues.calculateBottomPadding() + 80.dp,
+            top = innerPadding.calculateTopPadding(),
+            bottom = innerPadding.calculateBottomPadding() + 80.dp,
             start = 16.dp,
             end = 16.dp
         )

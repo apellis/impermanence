@@ -31,8 +31,16 @@
     <string name="notification_no_more_bells">No more bells today</string>
     <string name="notification_stop">Stop</string>
     <string name="quick_sit_title">Quick Sit</string>
-    <string name="warning_alarm_volume_off">Alarm volume is off, so bells will be silent. Turn up the alarm volume.</string>
+    <string name="warning_alarm_volume_off">Alarm volume is off or very low, so bells may not be heard. Turn up the alarm volume.</string>
     <string name="warning_exact_alarms_off">Exact alarms are turned off for Impermanence, so bells may be late while the screen is off.</string>
     <string name="warning_exact_alarms_action">Allow</string>
+    <string name="end_day">End Day</string>
+    <string name="headphones_connected">Headphones connected. Bells play in your headphones, and on the phone speaker too.</string>
+    <string name="warning_battery_optimized">Battery optimization is on for Impermanence. Some phones delay or stop timers to save battery, so bells could be late or missed.</string>
+    <string name="warning_battery_optimized_action">Turn off for Impermanence</string>
     <string name="warning_notifications_off">Notifications are off. Bells still ring, but you won\'t see or be able to stop the timer from the notification shade.</string>
+    <string name="unreadable_days_title">Unable to read saved days</string>
+    <string name="unreadable_days_message">Your saved days couldn\'t be read, so the default days were restored. A copy of the unreadable file was kept, and you can save it to send for recovery.</string>
+    <string name="unreadable_days_save">Save copy</string>
+    <string name="unreadable_days_ok">OK</string>
 </resources>

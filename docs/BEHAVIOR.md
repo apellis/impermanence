@@ -16,7 +16,8 @@ it should and never when it shouldn't.
 ### 1.1 Schedule of a day
 
 - A day has a **start time** (a wall-clock time: hour, minute, second) and an
-  ordered list of **segments** (each a duration of 1 to 1440 whole minutes).
+  ordered list of **segments** (each a duration of 1 second to 24 hours, to
+  the second). Import keeps durations as given, with no rounding.
 - An **occurrence** of a day on calendar date D, in the device's current time
   zone, starts at that wall-clock time on D:
   - If the time doesn't exist on D (DST gap), it moves forward by the gap
@@ -82,6 +83,8 @@ it should and never when it shouldn't.
 - Cancel or Close ends it with no end bell.
 - While a sit is running it can't be dismissed by accident; on iOS, the sheet
   can't be swiped down.
+- While it runs, the screen shows a live "Time remaining" countdown
+  (`HH:MM:SS`) and progress ring. There is no "Ends around" time.
 - When the sit completes, the screen closes and the end chimes ring out.
 - It resumes after the system ends the process, like a day session.
 
@@ -91,9 +94,21 @@ it should and never when it shouldn't.
   Disturb.
   - iOS: `.playback` audio session, background audio, and time-sensitive
     notifications as a fallback.
-  - Android: alarm audio stream and exact alarms.
+  - Android: alarm audio stream and exact alarms. While a session runs, the
+    foreground service holds a timed partial wake lock and the app asks to be
+    exempt from battery optimization, because some makers' battery savers
+    delay alarms. Reliability wins over battery: a long sit or retreat day may
+    use more power, plugged in or not.
+- Bells are **just sounds**. They never post notifications or fill the
+  notification list. The only notification is the one the OS requires for
+  timing to keep running (Android's ongoing timer notification, with Stop).
+- While headphones or a Bluetooth audio device are connected, the timing
+  screens show a small headphones icon, so it's clear where bells will sound.
+  On iOS bells play only in the headphones; Android's alarm stream also plays
+  on the phone speaker. The icon explains this when tapped.
 - The app warns, on the timing screens, when something could still keep bells
-  from being heard: notifications or alarms disallowed, or very low volume.
+  from being heard: notifications or alarms disallowed, very low volume (under
+  a fifth), or (Android) battery optimization still on.
 - "Ring now" plays the manual bell immediately and is not part of the
   schedule.
 
@@ -107,13 +122,15 @@ meaning. Layout and navigation follow each platform's conventions.
 | Seed data | First launch creates "Opening Day" (18:00, 5 segments, orange) and "Full Day" (07:00, 22 segments, poppy). |
 | Days list | Shows each day's name and time range in its theme color; reorder and delete. |
 | Day detail | Start time and end time, theme, segments with times and chime counts, "Start or Resume Day", Edit. |
-| Active day | Status (Empty, Day queued, Now, Complete), current segment, time remaining, next bell time, schedule with the current segment highlighted, manual bell ("Ring now", sound, chimes). |
-| Editing | Name, start time, theme, default bell (which also sets the start and manual bells), segments (name, minutes, custom or default bell; move, duplicate, delete). New segments: 15 min. A day needs a name and at least one segment. |
+| Active day | An "End Day" button ends timing, like leaving the screen. Ending is cheap: bells are tied to clock times, so starting the same day again resumes it with no confirmation. Status (Empty, Day queued, Now, Complete), current segment, time remaining, next bell time, schedule with the current segment highlighted, manual bell ("Ring now", sound, chimes). |
+| Editing | Name, start time, theme, default bell (which also sets the start and manual bells), segments (name, duration as minutes and seconds, custom or default bell; move, duplicate, delete). New segments: 15 min. A day needs a name and at least one segment. |
 | Settings | 24-hour clock (off), Loop days at midnight (on), Keep screen awake during active day (on), Import/Export Days. |
 | Keep screen awake | While a day is queued or running, if the setting is on. |
 | Import/export | Import first asks "Replace all days?", because it replaces every day. JSON `{ "version": 1, "days": [ ... ] }` with integer seconds (see `docs/fixtures/*.json` `day` for one day). File name `impermanence-days-YYYY-MM-DD.json`. Import also accepts the iOS native array. Unknown themes become teal; bells are clamped to valid values. |
 | Themes | 16 named colors. Text is black, except white on indigo, magenta, navy, oxblood and purple. |
-| Time display | `h:mm AM` or `HH:mm`; durations `HH:MM:SS`. |
+| Time display | `h:mm AM` or `HH:mm`; a time that isn't on a whole minute adds seconds (`7:15:30 AM` or `07:15:30`). Countdowns are `HH:MM:SS`. |
+| Backup | The OS backup keeps days and settings; a running session and the bell log are never restored onto another device. |
+| Unreadable days file | If the saved days can't be read, the app starts with an empty list but keeps a copy of the file and offers to save it, so nothing is lost. |
 
 When a behavior changes on one platform, update this file in the same PR,
 and track the matching change for the other platform.

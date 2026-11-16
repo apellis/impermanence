@@ -3,7 +3,6 @@ package com.neversink.impermanence.ui.screens.edit
 import android.app.TimePickerDialog
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.background
@@ -15,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -50,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import com.neversink.impermanence.model.Bell
 import com.neversink.impermanence.model.Day
 import com.neversink.impermanence.model.Theme
+import com.neversink.impermanence.ui.components.ThemeSwatch
 import com.neversink.impermanence.ui.components.BellSelectionControl
 import com.neversink.impermanence.ui.components.SegmentEditorCard
 import com.neversink.impermanence.ui.theme.AppUiTokens
@@ -144,12 +143,12 @@ fun DayEditScreen(
 
             val schedules = editingDay.segmentSchedule()
             val (dayStartSeconds, dayEndSeconds) = editingDay.startEndTimeSeconds
-            val totalMinutes = ((dayEndSeconds - dayStartSeconds).coerceAtLeast(0)) / 60
+            val totalSeconds = (dayEndSeconds - dayStartSeconds).coerceAtLeast(0)
             item {
                 TimelineSummaryCard(
                     startSeconds = dayStartSeconds,
                     endSeconds = dayEndSeconds,
-                    totalMinutes = totalMinutes,
+                    totalSeconds = totalSeconds,
                     use24HourClock = use24HourClock
                 )
             }
@@ -227,7 +226,7 @@ fun DayEditScreen(
 private fun TimelineSummaryCard(
     startSeconds: Int,
     endSeconds: Int,
-    totalMinutes: Int,
+    totalSeconds: Int,
     use24HourClock: Boolean
 ) {
     Surface(
@@ -247,7 +246,7 @@ private fun TimelineSummaryCard(
                 style = androidx.compose.material3.MaterialTheme.typography.bodyMedium
             )
             Text(
-                text = "Total duration: ${TimeFormatting.formattedDurationMinutes(totalMinutes)}",
+                text = "Total duration: ${TimeFormatting.formattedDurationSeconds(totalSeconds)}",
                 style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
                 color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -339,20 +338,6 @@ private fun ThemePickerField(
             }
         }
     }
-}
-
-@Composable
-private fun ThemeSwatch(theme: Theme) {
-    Box(
-        modifier = Modifier
-            .size(16.dp)
-            .background(theme.mainColor, RoundedCornerShape(4.dp))
-            .border(
-                width = 1.dp,
-                color = androidx.compose.material3.MaterialTheme.colorScheme.outline,
-                shape = RoundedCornerShape(4.dp)
-            )
-    )
 }
 
 @Composable
