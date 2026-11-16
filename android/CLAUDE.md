@@ -59,3 +59,10 @@ timer alone.
 * If the cloud container can't download the Android SDK, the pure logic under `domain/` and `model/`
   can still be compiled and tested with a plain Kotlin JVM build; push a branch and let CI run the
   rest.
+
+## Startup profile
+
+`app/src/main/baseline-prof.txt` is generated, not hand-written. The `baselineprofile` module walks
+the main screens (without starting any timing), and the "Android startup profile" workflow records
+it on an emulator and commits the file. Run that workflow by hand after large UI changes and before
+a release; it also runs on a PR that changes the generator.
