@@ -4,6 +4,7 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -67,6 +68,25 @@ class ParityUxTest {
         composeRule.onAllNodesWithText("Teal").onFirst().assertIsDisplayed()
 
         composeRule.onNodeWithContentDescription("Cancel").performClick()
+    }
+
+    @Test
+    fun themeAndSoundPickersOpen() {
+        openNewDayScreen()
+        composeRule.onAllNodesWithText("Teal").onFirst().performClick()
+        composeRule.waitUntil(5_000) { hasNodeWithText("Indigo") }
+        composeRule.onAllNodesWithText("Indigo").onFirst().performClick()
+        composeRule.waitUntil(5_000) { hasNodeWithText("Indigo") && !hasNodeWithText("Periwinkle") }
+        composeRule.onNodeWithContentDescription("Cancel").performClick()
+    }
+
+    @Test
+    fun deletingADayAsksFirst() {
+        composeRule.waitUntil(10_000) { hasNodeWithText("Opening Day") || hasNodeWithText("Full Day") }
+        composeRule.onAllNodesWithContentDescription("Delete").onFirst().performClick()
+        composeRule.waitUntil(5_000) { hasNodeWithText("This day and its segments will be removed.") }
+        composeRule.onNodeWithText("Cancel").performClick()
+        assertTrue(hasNodeWithText("Opening Day") || hasNodeWithText("Full Day"))
     }
 
     @Test

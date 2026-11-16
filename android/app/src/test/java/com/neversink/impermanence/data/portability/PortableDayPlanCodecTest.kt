@@ -112,4 +112,58 @@ class PortableDayPlanCodecTest {
         assertEquals("Legacy Day", decoded.first().name)
         assertTrue(decoded.first().segments.isNotEmpty())
     }
+
+    @Test
+    fun `decode reads an iOS native day file`() {
+        val payload = """
+            [
+              {
+                "id": "2F1C1B9E-7E0B-4C7C-9E57-1D2A3B4C5D6E",
+                "name": "From iPhone",
+                "startTime": 25200.4,
+                "segments": [
+                  { "id": "A1", "name": "Sit", "duration": 2700, "endBell": { "soundId": 0, "numRings": 3 } },
+                  { "id": "A2", "name": "Walk", "duration": 1800, "endBell": null }
+                ],
+                "startBell": { "soundId": 0, "numRings": 2 },
+                "manualBell": { "soundId": 0, "numRings": 1 },
+                "defaultBell": { "soundId": 0, "numRings": 1 },
+                "theme": "poppy"
+              }
+            ]
+        """.trimIndent()
+
+        val day = PortableDayPlanCodec.decode(payload).single()
+
+        assertEquals("From iPhone", day.name)
+        assertEquals(7 * 3600, day.startTimeSeconds)
+        assertEquals(listOf(2700, 1800), day.segments.map { it.durationSeconds })
+        assertEquals(Bell(0, 3), day.segments[0].customEndBell)
+        assertEquals(null, day.segments[1].customEndBell)
+        assertEquals(Bell(0, 2), day.startBell)
+        assertEquals(Theme.POPPY, day.theme)
+    }
+
+    @Test
+    fun `unknown themes become teal and missing bells follow the default bell`() {
+        val payload = """
+            { "version": 1, "days": [ {
+              "id": "d", "name": "Odd", "startTimeSeconds": 0,
+              "segments": [ { "id": "s", "name": "Sit", "durationSeconds": 60 } ],
+              "defaultBell": { "soundId": 0, "numRings": 4 },
+              "theme": "chartreuse"
+            } ] }
+        """.trimIndent()
+
+        val day = PortableDayPlanCodec.decode(payload).single()
+
+        assertEquals(Theme.TEAL, day.theme)
+        assertEquals(Bell(0, 4), day.startBell)
+        assertEquals(Bell(0, 4), day.manualBell)
+    }
+
+    @Test(expected = kotlinx.serialization.SerializationException::class)
+    fun `decode rejects files that are not day plans`() {
+        PortableDayPlanCodec.decode("""{ "hello": "world" }""")
+    }
 }
