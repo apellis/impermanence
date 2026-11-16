@@ -38,6 +38,7 @@ struct DayDetailView: View {
                                     Text("Day")
                                 }
                             }
+                            .accessibilityLabel("Day")
                         }
                     }
             } else {
@@ -45,6 +46,12 @@ struct DayDetailView: View {
             }
         }
         .navigationTitle(day.name)
+        .onAppear {
+            // A day session resumed at launch reopens its active screen.
+            if case .day(let s)? = BellEngine.shared.session, s.dayID == day.id {
+                isPresentingActiveDay = true
+            }
+        }
         .sheet(isPresented: $isPresentingEditView) {
             NavigationStack {
                 DayDetailEditView(day: $editingDay)
@@ -135,13 +142,11 @@ struct DayDetailView: View {
     }
 
     private var dayStartTime: Date {
-        calendar.startOfDay(for: Date.now)
-            .addingTimeInterval(day.startTime)
+        day.segmentStartEndTimes.first?.0 ?? day.startTimeAsDate
     }
 
     private var dayEndTime: Date {
-        calendar.startOfDay(for: Date.now)
-            .addingTimeInterval(day.startEndTimeIntervals.1)
+        day.segmentStartEndTimes.last?.1 ?? day.startTimeAsDate
     }
 }
 

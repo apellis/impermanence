@@ -1,0 +1,103 @@
+{
+  "name": "no-dst-kolkata",
+  "description": "A zone with a non-hour offset and no DST.",
+  "zone": "Asia/Kolkata",
+  "loopDays": false,
+  "sessionStart": "2026-03-08T11:30:00Z",
+  "until": "2026-03-09T11:30:00Z",
+  "day": {
+    "id": "866CD783-D051-5CF4-B314-3589D55D0842",
+    "name": "Opening Day",
+    "startTimeSeconds": 64800,
+    "segments": [
+      {
+        "id": "FF5F4D29-EA60-58EF-B880-C0FC6580C4E4",
+        "name": "Segment 1",
+        "durationSeconds": 2700
+      },
+      {
+        "id": "2B4ED090-C82D-53BB-AB2D-BE17575D5B59",
+        "name": "Segment 2",
+        "durationSeconds": 1800
+      },
+      {
+        "id": "30C61888-561E-57BB-9541-014600344DA9",
+        "name": "Segment 3",
+        "durationSeconds": 5400
+      },
+      {
+        "id": "A9F0D357-1A1C-5228-B231-7F47F116E158",
+        "name": "Segment 4",
+        "durationSeconds": 1800
+      },
+      {
+        "id": "A6F3B57E-1FBB-51AB-B5DF-6722C19F5226",
+        "name": "Segment 5",
+        "durationSeconds": 2700
+      }
+    ],
+    "startBell": {
+      "soundId": 0,
+      "numRings": 1
+    },
+    "manualBell": {
+      "soundId": 0,
+      "numRings": 1
+    },
+    "defaultBell": {
+      "soundId": 0,
+      "numRings": 1
+    },
+    "theme": "teal"
+  },
+  "expectedEvents": [
+    {
+      "instant": "2026-03-08T12:30:00Z",
+      "local": "2026-03-08 18:00:00 IST",
+      "kind": "start",
+      "segmentIndex": 0,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-03-08T13:15:00Z",
+      "local": "2026-03-08 18:45:00 IST",
+      "kind": "end",
+      "segmentIndex": 0,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-03-08T13:45:00Z",
+      "local": "2026-03-08 19:15:00 IST",
+      "kind": "end",
+      "segmentIndex": 1,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-03-08T15:15:00Z",
+      "local": "2026-03-08 20:45:00 IST",
+      "kind": "end",
+      "segmentIndex": 2,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-03-08T15:45:00Z",
+      "local": "2026-03-08 21:15:00 IST",
+      "kind": "end",
+      "segmentIndex": 3,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-03-08T16:30:00Z",
+      "local": "2026-03-08 22:00:00 IST",
+      "kind": "end",
+      "segmentIndex": 4,
+      "numRings": 1,
+      "soundId": 0
+    }
+  ]
+}

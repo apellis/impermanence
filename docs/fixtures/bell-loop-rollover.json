@@ -1,0 +1,135 @@
+{
+  "name": "loop-rollover",
+  "description": "Looping Opening Day opened mid-run: rest of today, then all of tomorrow.",
+  "zone": "Europe/Berlin",
+  "loopDays": true,
+  "sessionStart": "2026-06-10T17:00:00Z",
+  "until": "2026-06-11T22:00:00Z",
+  "day": {
+    "id": "866CD783-D051-5CF4-B314-3589D55D0842",
+    "name": "Opening Day",
+    "startTimeSeconds": 64800,
+    "segments": [
+      {
+        "id": "FF5F4D29-EA60-58EF-B880-C0FC6580C4E4",
+        "name": "Segment 1",
+        "durationSeconds": 2700
+      },
+      {
+        "id": "2B4ED090-C82D-53BB-AB2D-BE17575D5B59",
+        "name": "Segment 2",
+        "durationSeconds": 1800
+      },
+      {
+        "id": "30C61888-561E-57BB-9541-014600344DA9",
+        "name": "Segment 3",
+        "durationSeconds": 5400
+      },
+      {
+        "id": "A9F0D357-1A1C-5228-B231-7F47F116E158",
+        "name": "Segment 4",
+        "durationSeconds": 1800
+      },
+      {
+        "id": "A6F3B57E-1FBB-51AB-B5DF-6722C19F5226",
+        "name": "Segment 5",
+        "durationSeconds": 2700
+      }
+    ],
+    "startBell": {
+      "soundId": 0,
+      "numRings": 1
+    },
+    "manualBell": {
+      "soundId": 0,
+      "numRings": 1
+    },
+    "defaultBell": {
+      "soundId": 0,
+      "numRings": 1
+    },
+    "theme": "teal"
+  },
+  "expectedEvents": [
+    {
+      "instant": "2026-06-10T17:15:00Z",
+      "local": "2026-06-10 19:15:00 CEST",
+      "kind": "end",
+      "segmentIndex": 1,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-10T18:45:00Z",
+      "local": "2026-06-10 20:45:00 CEST",
+      "kind": "end",
+      "segmentIndex": 2,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-10T19:15:00Z",
+      "local": "2026-06-10 21:15:00 CEST",
+      "kind": "end",
+      "segmentIndex": 3,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-10T20:00:00Z",
+      "local": "2026-06-10 22:00:00 CEST",
+      "kind": "end",
+      "segmentIndex": 4,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-11T16:00:00Z",
+      "local": "2026-06-11 18:00:00 CEST",
+      "kind": "start",
+      "segmentIndex": 0,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-11T16:45:00Z",
+      "local": "2026-06-11 18:45:00 CEST",
+      "kind": "end",
+      "segmentIndex": 0,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-11T17:15:00Z",
+      "local": "2026-06-11 19:15:00 CEST",
+      "kind": "end",
+      "segmentIndex": 1,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-11T18:45:00Z",
+      "local": "2026-06-11 20:45:00 CEST",
+      "kind": "end",
+      "segmentIndex": 2,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-11T19:15:00Z",
+      "local": "2026-06-11 21:15:00 CEST",
+      "kind": "end",
+      "segmentIndex": 3,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-11T20:00:00Z",
+      "local": "2026-06-11 22:00:00 CEST",
+      "kind": "end",
+      "segmentIndex": 4,
+      "numRings": 1,
+      "soundId": 0
+    }
+  ]
+}

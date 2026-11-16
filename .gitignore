@@ -17,3 +17,5 @@ ios/Impermanence/*.xcresult
 ios/Impermanence/Impermanence.xcodeproj/project.xcworkspace/xcuserdata/alex.xcuserdatad/UserInterfaceState.xcuserstate
 ios/Impermanence/Impermanence.xcodeproj/xcuserdata/
 ios/Impermanence/Impermanence.xcodeproj/project.xcworkspace/xcuserdata/
+ios/.build/
+ios/.swiftpm/

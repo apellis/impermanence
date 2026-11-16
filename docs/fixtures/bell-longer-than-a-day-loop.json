@@ -1,0 +1,101 @@
+{
+  "name": "longer-than-a-day-loop",
+  "description": "A 25-hour looping day: the next run's bells only ring after the previous run ends.",
+  "zone": "America/New_York",
+  "loopDays": true,
+  "sessionStart": "2026-06-10T09:00:00Z",
+  "until": "2026-06-12T16:00:00Z",
+  "day": {
+    "id": "306D6691-D471-5805-BE30-8E730366BA1F",
+    "name": "Marathon",
+    "startTimeSeconds": 21600,
+    "segments": [
+      {
+        "id": "1C838907-086F-578B-A7D6-B5A72ADC4059",
+        "name": "Segment 1",
+        "durationSeconds": 36000
+      },
+      {
+        "id": "880510F3-13E4-587C-B3FD-7689AA2CF8A7",
+        "name": "Segment 2",
+        "durationSeconds": 36000
+      },
+      {
+        "id": "32113DBA-703B-5221-A1DD-3DFFD6976584",
+        "name": "Segment 3",
+        "durationSeconds": 18000
+      }
+    ],
+    "startBell": {
+      "soundId": 0,
+      "numRings": 1
+    },
+    "manualBell": {
+      "soundId": 0,
+      "numRings": 1
+    },
+    "defaultBell": {
+      "soundId": 0,
+      "numRings": 1
+    },
+    "theme": "teal"
+  },
+  "expectedEvents": [
+    {
+      "instant": "2026-06-10T11:00:00Z",
+      "local": "2026-06-10 07:00:00 EDT",
+      "kind": "end",
+      "segmentIndex": 2,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-10T20:00:00Z",
+      "local": "2026-06-10 16:00:00 EDT",
+      "kind": "end",
+      "segmentIndex": 0,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-11T06:00:00Z",
+      "local": "2026-06-11 02:00:00 EDT",
+      "kind": "end",
+      "segmentIndex": 1,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-11T11:00:00Z",
+      "local": "2026-06-11 07:00:00 EDT",
+      "kind": "end",
+      "segmentIndex": 2,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-11T20:00:00Z",
+      "local": "2026-06-11 16:00:00 EDT",
+      "kind": "end",
+      "segmentIndex": 0,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-12T06:00:00Z",
+      "local": "2026-06-12 02:00:00 EDT",
+      "kind": "end",
+      "segmentIndex": 1,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-12T11:00:00Z",
+      "local": "2026-06-12 07:00:00 EDT",
+      "kind": "end",
+      "segmentIndex": 2,
+      "numRings": 1,
+      "soundId": 0
+    }
+  ]
+}

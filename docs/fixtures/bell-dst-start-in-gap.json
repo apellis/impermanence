@@ -1,0 +1,64 @@
+{
+  "name": "dst-start-in-gap",
+  "description": "Start time 02:30 does not exist on 2026-03-08 in Los Angeles; it moves forward by the gap to 03:30 PDT.",
+  "zone": "America/Los_Angeles",
+  "loopDays": false,
+  "sessionStart": "2026-03-08T08:00:00Z",
+  "until": "2026-03-08T19:00:00Z",
+  "day": {
+    "id": "B9AA2FAA-5603-56C4-91F7-AD38689D99DC",
+    "name": "Gap start",
+    "startTimeSeconds": 9000,
+    "segments": [
+      {
+        "id": "830843D9-A7AD-5940-8226-758057C3A2E6",
+        "name": "Segment 1",
+        "durationSeconds": 1800
+      },
+      {
+        "id": "1CD4780D-EE06-5A26-849E-32A0B30FA0B6",
+        "name": "Segment 2",
+        "durationSeconds": 1800
+      }
+    ],
+    "startBell": {
+      "soundId": 0,
+      "numRings": 1
+    },
+    "manualBell": {
+      "soundId": 0,
+      "numRings": 1
+    },
+    "defaultBell": {
+      "soundId": 0,
+      "numRings": 1
+    },
+    "theme": "teal"
+  },
+  "expectedEvents": [
+    {
+      "instant": "2026-03-08T10:30:00Z",
+      "local": "2026-03-08 03:30:00 PDT",
+      "kind": "start",
+      "segmentIndex": 0,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-03-08T11:00:00Z",
+      "local": "2026-03-08 04:00:00 PDT",
+      "kind": "end",
+      "segmentIndex": 0,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-03-08T11:30:00Z",
+      "local": "2026-03-08 04:30:00 PDT",
+      "kind": "end",
+      "segmentIndex": 1,
+      "numRings": 1,
+      "soundId": 0
+    }
+  ]
+}

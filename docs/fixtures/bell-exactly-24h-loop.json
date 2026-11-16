@@ -1,0 +1,80 @@
+{
+  "name": "exactly-24h-loop",
+  "description": "A looping day of exactly 24 h: the next run's start coincides with the last end bell, and only the end bell rings.",
+  "zone": "America/New_York",
+  "loopDays": true,
+  "sessionStart": "2026-06-10T09:00:00Z",
+  "until": "2026-06-12T11:00:00Z",
+  "day": {
+    "id": "8CB6BD0D-A7FF-52BB-90C1-CEC5A3E75EDB",
+    "name": "Round the clock",
+    "startTimeSeconds": 21600,
+    "segments": [
+      {
+        "id": "59BCC0F3-3A2B-5669-A9B9-06B5A28A49A7",
+        "name": "Segment 1",
+        "durationSeconds": 43200
+      },
+      {
+        "id": "4F9F9C44-A5BF-57A4-A74A-064D82CAEFA2",
+        "name": "Segment 2",
+        "durationSeconds": 43200
+      }
+    ],
+    "startBell": {
+      "soundId": 0,
+      "numRings": 2
+    },
+    "manualBell": {
+      "soundId": 0,
+      "numRings": 3
+    },
+    "defaultBell": {
+      "soundId": 0,
+      "numRings": 3
+    },
+    "theme": "teal"
+  },
+  "expectedEvents": [
+    {
+      "instant": "2026-06-10T10:00:00Z",
+      "local": "2026-06-10 06:00:00 EDT",
+      "kind": "end",
+      "segmentIndex": 1,
+      "numRings": 3,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-10T22:00:00Z",
+      "local": "2026-06-10 18:00:00 EDT",
+      "kind": "end",
+      "segmentIndex": 0,
+      "numRings": 3,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-11T10:00:00Z",
+      "local": "2026-06-11 06:00:00 EDT",
+      "kind": "end",
+      "segmentIndex": 1,
+      "numRings": 3,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-11T22:00:00Z",
+      "local": "2026-06-11 18:00:00 EDT",
+      "kind": "end",
+      "segmentIndex": 0,
+      "numRings": 3,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-12T10:00:00Z",
+      "local": "2026-06-12 06:00:00 EDT",
+      "kind": "end",
+      "segmentIndex": 1,
+      "numRings": 3,
+      "soundId": 0
+    }
+  ]
+}

@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Combine
 
 struct DaysView: View {
     @Binding var days: [Day]
@@ -14,13 +15,15 @@ struct DaysView: View {
     @State private var isPresentingAboutView = false
     @State private var isPresentingNewDayView = false
     @State private var isPresentingQuickSit = false
+    @State private var path: [UUID] = []
+    @ObservedObject private var engine = BellEngine.shared
     let saveAction: ()->Void
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             List {
-                ForEach($days) { $day in
-                    NavigationLink(destination: DayDetailView(day: $day)) {
+                ForEach(days) { day in
+                    NavigationLink(value: day.id) {
                         DayCardView(day: day)
                     }
                     .listRowBackground(day.theme.mainColor)
@@ -33,6 +36,11 @@ struct DaysView: View {
                 }
             }
             .navigationTitle("Days")
+            .navigationDestination(for: UUID.self) { id in
+                if let index = days.firstIndex(where: { $0.id == id }) {
+                    DayDetailView(day: $days[index])
+                }
+            }
             .toolbar {
                 ToolbarItemGroup(placement: .navigationBarTrailing) {
                     Button(action: {
@@ -76,9 +84,37 @@ struct DaysView: View {
             .onChange(of: scenePhase) { phase in
                 if phase == .inactive { saveAction() }
             }
+            .onReceive(engine.$resumedSession.compactMap { $0 }) { resumed in
+                // iOS ended the app while a day or Quick Sit was being timed:
+                // go back to that screen, where the bells already resumed.
+                engine.resumedSession = nil
+                switch resumed {
+                case .day(let s):
+                    path = [s.dayID]
+                case .quickSit:
+                    path = []
+                    isPresentingQuickSit = true
+                }
+            }
+        }
+        .overlay(alignment: .bottomLeading) { BellEngineDebugStatus() }
+    }
+}
+
+/// Visible only in UI tests: lets them check the bell engine's state.
+struct BellEngineDebugStatus: View {
+    @ObservedObject private var engine = BellEngine.shared
+
+    var body: some View {
+        if BellEngine.isUITesting {
+            Text(engine.debugStatus)
+                .font(.caption2)
+                .padding(4)
+                .accessibilityIdentifier("bellEngineStatus")
         }
     }
 }
+
 
 struct DaysView_Previews: PreviewProvider {
     static var previews: some View {
