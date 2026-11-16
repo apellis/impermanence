@@ -37,8 +37,8 @@ struct DayCardView: View {
     }
 
     private var timeRangeText: String? {
-        guard let first = day.segmentStartEndTimes.first,
-              let last = day.segmentStartEndTimes.last else {
+        let times = day.segmentStartEndTimes
+        guard let first = times.first, let last = times.last else {
             return nil
         }
         let start = TimeFormatting.formattedTime(from: first.0, use24HourClock: use24HourClock)

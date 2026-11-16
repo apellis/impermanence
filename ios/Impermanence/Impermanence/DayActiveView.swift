@@ -17,7 +17,7 @@ struct DayActiveView: View {
     @AppStorage("use24HourClock") private var use24HourClock = false
     @AppStorage("keepScreenAwakeDuringActiveDay") private var keepScreenAwakeDuringActiveDay = true
 
-    private struct ScheduleRowData: Identifiable {
+    private struct ScheduleRowData: Identifiable, Equatable {
         let id: UUID
         let segment: Day.Segment
         let startTime: Date
@@ -25,7 +25,9 @@ struct DayActiveView: View {
         let bell: Bell
     }
 
-    private struct ScheduleListView: View {
+    /// Equatable, so the once-a-second countdown doesn't rebuild the whole
+    /// schedule: it redraws only when a row or the highlight changes.
+    private struct ScheduleListView: View, Equatable {
         let rows: [ScheduleRowData]
         let theme: Theme
         let use24HourClock: Bool
@@ -36,8 +38,7 @@ struct DayActiveView: View {
                 Text("Schedule")
                     .font(.headline)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                ForEach(rows.indices, id: \.self) { index in
-                    let row = rows[index]
+                ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
                     SegmentCardView(
                         segment: row.segment,
                         startTime: row.startTime,
@@ -88,6 +89,7 @@ struct DayActiveView: View {
                                      theme: day.theme,
                                      use24HourClock: use24HourClock,
                                      highlightedIndex: dayTimer.segmentIndex)
+                    .equatable()
                 }
                 .padding(.horizontal, UIStyle.screenPadding)
                 .padding(.bottom, UIStyle.screenPadding)
