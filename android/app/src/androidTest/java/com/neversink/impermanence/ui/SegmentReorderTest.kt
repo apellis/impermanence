@@ -2,6 +2,7 @@ package com.neversink.impermanence.ui
 
 import android.Manifest
 import android.os.Build
+import android.view.KeyEvent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -13,8 +14,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.performScrollTo
-import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.rule.GrantPermissionRule
 import com.neversink.impermanence.MainActivity
 import org.junit.Assert.assertTrue
@@ -82,11 +83,11 @@ class SegmentReorderTest {
         composeRule.waitUntil(15_000) { has("Name") }
         composeRule.onNodeWithText("Name").performTextInput(name)
         composeRule.waitForIdle()
-        // The first back would only hide the keyboard, so close it first; then back dismisses the sheet.
-        Espresso.closeSoftKeyboard()
-        repeat(2) {
+        // System back: the first may only hide the keyboard, the next dismisses the sheet. Espresso's
+        // pressBack can't be used, because the sheet is its own window and Espresso waits for focus.
+        repeat(3) {
             if (has("Use day default bell")) {
-                Espresso.pressBack()
+                InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
                 composeRule.waitForIdle()
             }
         }
