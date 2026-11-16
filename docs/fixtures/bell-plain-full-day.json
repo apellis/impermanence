@@ -1,0 +1,324 @@
+{
+  "name": "plain-full-day",
+  "description": "Full Day on an ordinary date, opened before it starts, no looping.",
+  "zone": "America/New_York",
+  "loopDays": false,
+  "sessionStart": "2026-06-10T10:30:00Z",
+  "until": "2026-06-11T10:00:00Z",
+  "day": {
+    "id": "A052D865-E6FD-5B53-9962-C0EE99B20772",
+    "name": "Full Day",
+    "startTimeSeconds": 25200,
+    "segments": [
+      {
+        "id": "7A409148-3CD2-5390-9B82-1A9A48974551",
+        "name": "Segment 1",
+        "durationSeconds": 900
+      },
+      {
+        "id": "491E61DF-A826-5CEA-A9AA-6EE607B22F37",
+        "name": "Segment 2",
+        "durationSeconds": 2700
+      },
+      {
+        "id": "A09C0BA4-5F99-5E31-9A2D-7D7F9D55BD5B",
+        "name": "Segment 3",
+        "durationSeconds": 2700
+      },
+      {
+        "id": "34FFDA78-6DFD-5ACC-898F-389F781FB2F0",
+        "name": "Segment 4",
+        "durationSeconds": 1800
+      },
+      {
+        "id": "857D55FB-BDC6-5BD8-8B53-325C89B1CF1F",
+        "name": "Segment 5",
+        "durationSeconds": 2700
+      },
+      {
+        "id": "56AF7E6C-0D73-5A4B-98C3-410AE1CC9F79",
+        "name": "Segment 6",
+        "durationSeconds": 1800
+      },
+      {
+        "id": "BEB41D3E-B8C4-58C7-9849-FBA5999F4AC9",
+        "name": "Segment 7",
+        "durationSeconds": 3600
+      },
+      {
+        "id": "8FC67923-20F8-51A6-8DFD-EB120E529FEC",
+        "name": "Segment 8",
+        "durationSeconds": 1800
+      },
+      {
+        "id": "1AFD5AD7-1CDC-56F4-8189-F989BD354F34",
+        "name": "Segment 9",
+        "durationSeconds": 2700
+      },
+      {
+        "id": "579F968B-D8AB-5268-A4A8-668756DD5A3E",
+        "name": "Segment 10",
+        "durationSeconds": 2700
+      },
+      {
+        "id": "0BC24673-AE0C-516E-887F-5571F53BFD64",
+        "name": "Segment 11",
+        "durationSeconds": 1800
+      },
+      {
+        "id": "4A7559BE-7FB6-5DB0-BB30-051B3D686892",
+        "name": "Segment 12",
+        "durationSeconds": 2700
+      },
+      {
+        "id": "199678A5-EE65-5B7E-B49E-4D2929F0AB4B",
+        "name": "Segment 13",
+        "durationSeconds": 2700
+      },
+      {
+        "id": "714BC943-0969-5CAB-A119-2BB72AECFA74",
+        "name": "Segment 14",
+        "durationSeconds": 3600
+      },
+      {
+        "id": "548C14B3-808C-5396-8132-430DF93528DD",
+        "name": "Segment 15",
+        "durationSeconds": 1800
+      },
+      {
+        "id": "5C7843EA-AD6F-53F5-9FB5-08A6134D2916",
+        "name": "Segment 16",
+        "durationSeconds": 2700
+      },
+      {
+        "id": "6481DB06-E2DA-570D-992A-B9C989FB06F2",
+        "name": "Segment 17",
+        "durationSeconds": 1800
+      },
+      {
+        "id": "826EBE41-F53C-535F-9C4C-14C65D23E8E2",
+        "name": "Segment 18",
+        "durationSeconds": 2700
+      },
+      {
+        "id": "23A94995-EA8D-5475-8002-43A08A730FD5",
+        "name": "Segment 19",
+        "durationSeconds": 1800
+      },
+      {
+        "id": "C3747CDE-CC0B-5E5D-BED1-CF04FD512EEE",
+        "name": "Segment 20",
+        "durationSeconds": 5400
+      },
+      {
+        "id": "382AD294-6360-51E6-8DD8-B6C502422FB8",
+        "name": "Segment 21",
+        "durationSeconds": 1800
+      },
+      {
+        "id": "742D2F77-E9F4-5C5F-B54A-5190EA07D35B",
+        "name": "Segment 22",
+        "durationSeconds": 2700
+      }
+    ],
+    "startBell": {
+      "soundId": 0,
+      "numRings": 1
+    },
+    "manualBell": {
+      "soundId": 0,
+      "numRings": 1
+    },
+    "defaultBell": {
+      "soundId": 0,
+      "numRings": 1
+    },
+    "theme": "teal"
+  },
+  "expectedEvents": [
+    {
+      "instant": "2026-06-10T11:00:00Z",
+      "local": "2026-06-10 07:00:00 EDT",
+      "kind": "start",
+      "segmentIndex": 0,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-10T11:15:00Z",
+      "local": "2026-06-10 07:15:00 EDT",
+      "kind": "end",
+      "segmentIndex": 0,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-10T12:00:00Z",
+      "local": "2026-06-10 08:00:00 EDT",
+      "kind": "end",
+      "segmentIndex": 1,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-10T12:45:00Z",
+      "local": "2026-06-10 08:45:00 EDT",
+      "kind": "end",
+      "segmentIndex": 2,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-10T13:15:00Z",
+      "local": "2026-06-10 09:15:00 EDT",
+      "kind": "end",
+      "segmentIndex": 3,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-10T14:00:00Z",
+      "local": "2026-06-10 10:00:00 EDT",
+      "kind": "end",
+      "segmentIndex": 4,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-10T14:30:00Z",
+      "local": "2026-06-10 10:30:00 EDT",
+      "kind": "end",
+      "segmentIndex": 5,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-10T15:30:00Z",
+      "local": "2026-06-10 11:30:00 EDT",
+      "kind": "end",
+      "segmentIndex": 6,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-10T16:00:00Z",
+      "local": "2026-06-10 12:00:00 EDT",
+      "kind": "end",
+      "segmentIndex": 7,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-10T16:45:00Z",
+      "local": "2026-06-10 12:45:00 EDT",
+      "kind": "end",
+      "segmentIndex": 8,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-10T17:30:00Z",
+      "local": "2026-06-10 13:30:00 EDT",
+      "kind": "end",
+      "segmentIndex": 9,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-10T18:00:00Z",
+      "local": "2026-06-10 14:00:00 EDT",
+      "kind": "end",
+      "segmentIndex": 10,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-10T18:45:00Z",
+      "local": "2026-06-10 14:45:00 EDT",
+      "kind": "end",
+      "segmentIndex": 11,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-10T19:30:00Z",
+      "local": "2026-06-10 15:30:00 EDT",
+      "kind": "end",
+      "segmentIndex": 12,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-10T20:30:00Z",
+      "local": "2026-06-10 16:30:00 EDT",
+      "kind": "end",
+      "segmentIndex": 13,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-10T21:00:00Z",
+      "local": "2026-06-10 17:00:00 EDT",
+      "kind": "end",
+      "segmentIndex": 14,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-10T21:45:00Z",
+      "local": "2026-06-10 17:45:00 EDT",
+      "kind": "end",
+      "segmentIndex": 15,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-10T22:15:00Z",
+      "local": "2026-06-10 18:15:00 EDT",
+      "kind": "end",
+      "segmentIndex": 16,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-10T23:00:00Z",
+      "local": "2026-06-10 19:00:00 EDT",
+      "kind": "end",
+      "segmentIndex": 17,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-10T23:30:00Z",
+      "local": "2026-06-10 19:30:00 EDT",
+      "kind": "end",
+      "segmentIndex": 18,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-11T01:00:00Z",
+      "local": "2026-06-10 21:00:00 EDT",
+      "kind": "end",
+      "segmentIndex": 19,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-11T01:30:00Z",
+      "local": "2026-06-10 21:30:00 EDT",
+      "kind": "end",
+      "segmentIndex": 20,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-11T02:15:00Z",
+      "local": "2026-06-10 22:15:00 EDT",
+      "kind": "end",
+      "segmentIndex": 21,
+      "numRings": 1,
+      "soundId": 0
+    }
+  ]
+}

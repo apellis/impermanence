@@ -1,0 +1,64 @@
+{
+  "name": "dst-spring-forward-london",
+  "description": "UK spring forward (01:00 -> 02:00 on 2026-03-29); start 01:30 becomes 02:30 BST.",
+  "zone": "Europe/London",
+  "loopDays": false,
+  "sessionStart": "2026-03-29T00:30:00Z",
+  "until": "2026-03-29T11:00:00Z",
+  "day": {
+    "id": "F423B7ED-14E5-5DC2-A7B8-2C0D27AECC61",
+    "name": "London gap",
+    "startTimeSeconds": 5400,
+    "segments": [
+      {
+        "id": "5B4A5AE6-DD82-5675-9892-20712AA813A2",
+        "name": "Segment 1",
+        "durationSeconds": 2700
+      },
+      {
+        "id": "CA6F84F1-50AA-5A6B-853F-32DFCCF7CFCB",
+        "name": "Segment 2",
+        "durationSeconds": 2700
+      }
+    ],
+    "startBell": {
+      "soundId": 0,
+      "numRings": 1
+    },
+    "manualBell": {
+      "soundId": 0,
+      "numRings": 1
+    },
+    "defaultBell": {
+      "soundId": 0,
+      "numRings": 1
+    },
+    "theme": "teal"
+  },
+  "expectedEvents": [
+    {
+      "instant": "2026-03-29T01:30:00Z",
+      "local": "2026-03-29 02:30:00 BST",
+      "kind": "start",
+      "segmentIndex": 0,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-03-29T02:15:00Z",
+      "local": "2026-03-29 03:15:00 BST",
+      "kind": "end",
+      "segmentIndex": 0,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-03-29T03:00:00Z",
+      "local": "2026-03-29 04:00:00 BST",
+      "kind": "end",
+      "segmentIndex": 1,
+      "numRings": 1,
+      "soundId": 0
+    }
+  ]
+}

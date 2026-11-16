@@ -1,0 +1,64 @@
+{
+  "name": "dst-start-ambiguous",
+  "description": "Start time 01:30 happens twice on 2026-11-01 in Los Angeles; the first (PDT) is used.",
+  "zone": "America/Los_Angeles",
+  "loopDays": false,
+  "sessionStart": "2026-11-01T07:00:00Z",
+  "until": "2026-11-01T20:00:00Z",
+  "day": {
+    "id": "A796620C-3CF0-5E8B-8CFA-A8B5DEABEBC7",
+    "name": "Ambiguous start",
+    "startTimeSeconds": 5400,
+    "segments": [
+      {
+        "id": "CB4DBB1C-0666-5955-9834-29CBEC6DEFFD",
+        "name": "Segment 1",
+        "durationSeconds": 1200
+      },
+      {
+        "id": "2520DFAC-3FAB-5317-ADA8-7D349CD45C42",
+        "name": "Segment 2",
+        "durationSeconds": 1200
+      }
+    ],
+    "startBell": {
+      "soundId": 0,
+      "numRings": 1
+    },
+    "manualBell": {
+      "soundId": 0,
+      "numRings": 1
+    },
+    "defaultBell": {
+      "soundId": 0,
+      "numRings": 1
+    },
+    "theme": "teal"
+  },
+  "expectedEvents": [
+    {
+      "instant": "2026-11-01T08:30:00Z",
+      "local": "2026-11-01 01:30:00 PDT",
+      "kind": "start",
+      "segmentIndex": 0,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-11-01T08:50:00Z",
+      "local": "2026-11-01 01:50:00 PDT",
+      "kind": "end",
+      "segmentIndex": 0,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-11-01T09:10:00Z",
+      "local": "2026-11-01 01:10:00 PST",
+      "kind": "end",
+      "segmentIndex": 1,
+      "numRings": 1,
+      "soundId": 0
+    }
+  ]
+}

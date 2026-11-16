@@ -19,32 +19,35 @@ struct Day: Identifiable, Codable {
     var defaultBell: Bell
     var theme: Theme
 
+    /// Today's start, as a wall-clock time in the current time zone.
+    /// Setting it keeps only the hour, minute and second.
     var startTimeAsDate: Date {
         get {
-            Calendar.current.startOfDay(for: Date.now).addingTimeInterval(self.startTime)
+            let calendar = Calendar.current
+            return DaySchedule.instant(ofSecondsAfterMidnight: startTime,
+                                       on: CalendarDay(containing: Date.now, calendar: calendar),
+                                       calendar: calendar)
         }
         set {
-            self.startTime = Self.normalizedStartTime(newValue.timeIntervalSince(Calendar.current.startOfDay(for: Date.now)))
+            let c = Calendar.current.dateComponents([.hour, .minute, .second], from: newValue)
+            let hours: Int = c.hour ?? 0
+            let minutes: Int = c.minute ?? 0
+            let seconds: Int = c.second ?? 0
+            let total: Int = hours * 3600 + minutes * 60 + seconds
+            self.startTime = Self.normalizedStartTime(TimeInterval(total))
         }
     }
 
-    var startEndTimeIntervals: (TimeInterval, TimeInterval) {
-        var endTime: TimeInterval = startTime
-        self.segments.forEach { segment in
-            endTime += segment.duration
-        }
-        return (self.startTime, endTime)
+    /// Total length of all segments, in seconds.
+    var totalDuration: TimeInterval {
+        segments.reduce(0) { $0 + $1.duration }
     }
 
+    /// Start and end of each segment for today's occurrence (DST-correct).
     var segmentStartEndTimes: [(Date, Date)] {
-        var ret: [(Date, Date)] = []
-        var timeCursor = Calendar.current.startOfDay(for: Date.now)
-            .addingTimeInterval(startTime)
-        self.segments.forEach { segment in
-            ret.append((timeCursor, timeCursor.addingTimeInterval(segment.duration)))
-            timeCursor.addTimeInterval(segment.duration)
-        }
-        return ret
+        let calendar = Calendar.current
+        let occurrence = DaySchedule.occurrence(of: self, on: CalendarDay(containing: Date.now, calendar: calendar), calendar: calendar)
+        return occurrence.segments.map { ($0.start, $0.end) }
     }
 
     init(id: UUID = UUID(), name: String, startTime: TimeInterval, segments: [Segment], startBell: Bell = Bell.singleBell, manualBell: Bell? = nil, defaultBell: Bell = Bell.singleBell, theme: Theme = Theme.bubblegum) {
@@ -104,16 +107,6 @@ struct Day: Identifiable, Codable {
         let mod = seconds % secondsPerDay
         let wrapped = mod < 0 ? mod + secondsPerDay : mod
         return TimeInterval(wrapped)
-    }
-
-    var currentSegmentAndTimeRemaining: (Segment, TimeInterval)? {
-        var ret: (Segment, TimeInterval)? = nil
-        zip(segments, segmentStartEndTimes).forEach({ (segment, times) in
-            if Date.now >= times.0 && Date.now < times.1 {
-                ret = (segment, times.1.timeIntervalSince(Date.now))
-            }
-        })
-        return ret
     }
 
     static var emptyDay: Day {
