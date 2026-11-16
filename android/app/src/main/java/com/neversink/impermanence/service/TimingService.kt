@@ -10,6 +10,7 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import android.text.format.DateFormat
 import android.util.Log
 import androidx.core.app.NotificationCompat
@@ -32,12 +33,15 @@ import java.util.Date
 /**
  * Foreground service that runs while a session has a bell pending. It keeps the process at foreground
  * priority, shows the ongoing notification (with Stop), and runs an in-process timer as a second trigger
- * next to the exact alarm. It holds no long-lived wake lock: when the CPU sleeps, the alarm wakes it.
+ * next to the exact alarm. While a session runs it also holds a partial wake lock (renewed on each
+ * tick with a timeout, so it can never leak), so the ticker keeps running with the screen off even on
+ * devices whose maker delays alarms. Alex chose reliability over battery for long sits and retreat days.
  */
 class TimingService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var tickerJob: Job? = null
     private var notificationJob: Job? = null
+    private var wakeLock: PowerManager.WakeLock? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -86,6 +90,7 @@ class TimingService : Service() {
     }
 
     override fun onDestroy() {
+        releaseWakeLock()
         scope.cancel()
         super.onDestroy()
     }
@@ -100,6 +105,7 @@ class TimingService : Service() {
                 val next = SessionEngine.nextWakeMillis.value
                 if (SessionEngine.session.value == null) break
                 val wait = if (next == null) MAX_TICK_MILLIS else (next - SessionEngine.now()).coerceIn(MIN_TICK_MILLIS, MAX_TICK_MILLIS)
+                holdWakeLock(wait + WAKE_LOCK_MARGIN_MILLIS)
                 delay(wait)
                 runCatching {
                     SessionEngine.process(context, SessionEngine.Trigger.SERVICE_TICK, allowServiceStart = false)
@@ -130,7 +136,23 @@ class TimingService : Service() {
         }
     }
 
+    /** Keeps the CPU awake until the next tick. Not reference counted, so each call just moves the timeout. */
+    private fun holdWakeLock(timeoutMillis: Long) {
+        runCatching {
+            val lock = wakeLock ?: getSystemService(PowerManager::class.java)
+                ?.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Impermanence:timing")
+                ?.also { it.setReferenceCounted(false); wakeLock = it }
+            lock?.acquire(timeoutMillis)
+        }.onFailure { Log.w(LOG_TAG, "Wake lock unavailable; the alarm still rings bells", it) }
+    }
+
+    private fun releaseWakeLock() {
+        runCatching { wakeLock?.takeIf { it.isHeld }?.release() }
+        wakeLock = null
+    }
+
     private fun stopSelfSafely() {
+        releaseWakeLock()
         runCatching { ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE) }
         stopSelf()
     }
@@ -154,6 +176,7 @@ class TimingService : Service() {
         const val NOTIFICATION_ID = 1001
         private const val MIN_TICK_MILLIS = 50L
         private const val MAX_TICK_MILLIS = 30_000L
+        private const val WAKE_LOCK_MARGIN_MILLIS = 30_000L
 
         fun createNotificationChannel(context: Context) {
             val channel = NotificationChannel(

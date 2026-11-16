@@ -83,7 +83,9 @@ class ParityUxTest {
     @Test
     fun deletingADayAsksFirst() {
         composeRule.waitUntil(10_000) { hasNodeWithText("Opening Day") || hasNodeWithText("Full Day") }
-        composeRule.onAllNodesWithContentDescription("Delete").onFirst().performClick()
+        composeRule.onAllNodesWithContentDescription("More options for", substring = true).onFirst().performClick()
+        composeRule.waitUntil(15_000) { hasNodeWithText("Delete") }
+        composeRule.onNodeWithText("Delete").performClick()
         composeRule.waitUntil(5_000) { hasNodeWithText("This day and its segments will be removed.") }
         composeRule.onNodeWithText("Cancel").performClick()
         assertTrue(hasNodeWithText("Opening Day") || hasNodeWithText("Full Day"))

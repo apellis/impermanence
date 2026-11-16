@@ -26,6 +26,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -50,6 +51,7 @@ import com.neversink.impermanence.model.BellCatalog
 import com.neversink.impermanence.model.Day
 import com.neversink.impermanence.domain.timer.DaySchedule
 import com.neversink.impermanence.ui.components.BellHealthBanner
+import com.neversink.impermanence.ui.components.HeadphonesIndicator
 import com.neversink.impermanence.ui.components.RequestNotificationPermission
 import java.time.Instant
 import java.time.ZoneId
@@ -103,10 +105,13 @@ fun DayActiveScreen(
                 title = { Text(day.name) },
                 navigationIcon = {
                     IconButton(onClick = onExit) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.end_day))
                     }
                 },
                 actions = {
+                    // Ending is cheap: bells are tied to clock times, so starting the same day again resumes it.
+                    TextButton(onClick = onExit) { Text(stringResource(R.string.end_day), color = day.theme.accentColor) }
+                    HeadphonesIndicator()
                     IconButton(onClick = { isManualBellMenuExpanded = true }) {
                         Icon(
                             imageVector = Icons.Default.Notifications,

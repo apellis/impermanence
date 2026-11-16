@@ -33,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.neversink.impermanence.model.Bell
@@ -105,10 +106,9 @@ fun SegmentEditorCard(
             )
 
             DurationControl(
-                durationMinutes = localSegment.durationSeconds / 60,
-                onDurationChanged = { minutes ->
-                    val clamped = minutes.coerceIn(1, 24 * 60)
-                    localSegment = localSegment.copy(durationSeconds = clamped * 60)
+                durationSeconds = localSegment.durationSeconds,
+                onDurationChanged = { seconds ->
+                    localSegment = localSegment.copy(durationSeconds = seconds.coerceIn(MIN_SECONDS, MAX_SECONDS))
                     onSegmentChange(localSegment)
                 }
             )
@@ -147,45 +147,80 @@ fun SegmentEditorCard(
     }
 }
 
+private const val MIN_SECONDS = 1
+private const val MAX_SECONDS = 24 * 60 * 60
+
+/**
+ * Minutes and seconds fields for a segment's length. A field may be empty while typing; the
+ * duration only changes once the fields hold a valid length, from 1 second to 24 hours.
+ */
 @Composable
 private fun DurationControl(
-    durationMinutes: Int,
+    durationSeconds: Int,
     onDurationChanged: (Int) -> Unit
 ) {
-    val durationText = durationMinutes.toString()
+    var minutesText by remember { mutableStateOf((durationSeconds / 60).toString()) }
+    var secondsText by remember { mutableStateOf((durationSeconds % 60).toString()) }
+    // Follow outside changes (the +/- buttons, undo of a move) without fighting the person's typing.
+    LaunchedEffect(durationSeconds) {
+        val typed = (minutesText.toIntOrNull() ?: 0) * 60 + (secondsText.toIntOrNull() ?: 0)
+        if (typed != durationSeconds) {
+            minutesText = (durationSeconds / 60).toString()
+            secondsText = (durationSeconds % 60).toString()
+        }
+    }
+    fun commit(minutes: String, seconds: String) {
+        val m = minutes.toIntOrNull() ?: 0
+        val s = seconds.toIntOrNull() ?: 0
+        val total = m * 60 + s
+        if ((minutes.isNotEmpty() || seconds.isNotEmpty()) && total in MIN_SECONDS..MAX_SECONDS) onDurationChanged(total)
+    }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Duration")
-        OutlinedTextField(
-            value = durationText,
-            onValueChange = { newValue ->
-                val digits = newValue.filter { it.isDigit() }
-                if (digits.isEmpty()) return@OutlinedTextField
-                onDurationChanged(digits.toIntOrNull() ?: durationMinutes)
-            },
-            modifier = Modifier.width(140.dp),
-            label = { Text("Minutes") },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = minutesText,
+                onValueChange = { newValue ->
+                    minutesText = newValue.filter { it.isDigit() }.take(4)
+                    commit(minutesText, secondsText)
+                },
+                modifier = Modifier.width(110.dp),
+                label = { Text("Minutes") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+            )
+            OutlinedTextField(
+                value = secondsText,
+                onValueChange = { newValue ->
+                    val digits = newValue.filter { it.isDigit() }.take(2)
+                    secondsText = if ((digits.toIntOrNull() ?: 0) > 59) "59" else digits
+                    commit(minutesText, secondsText)
+                },
+                modifier = Modifier.width(110.dp),
+                label = { Text("Seconds") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+            )
+        }
         Text(
-            text = TimeFormatting.formattedDurationMinutes(durationMinutes),
+            text = TimeFormatting.formattedDurationSeconds(durationSeconds),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { onDurationChanged(durationMinutes - 1) }) {
+            IconButton(onClick = { onDurationChanged((durationSeconds - 60).coerceAtLeast(MIN_SECONDS)) }) {
                 Icon(imageVector = Icons.Default.Remove, contentDescription = "Minus one minute")
             }
             Spacer(modifier = Modifier.width(4.dp))
-            IconButton(onClick = { onDurationChanged(durationMinutes + 1) }) {
+            IconButton(onClick = { onDurationChanged((durationSeconds + 60).coerceAtMost(MAX_SECONDS)) }) {
                 Icon(imageVector = Icons.Default.Add, contentDescription = "Plus one minute")
             }
             Spacer(modifier = Modifier.width(16.dp))
-            TextButton(onClick = { onDurationChanged(durationMinutes - 5) }) {
+            TextButton(onClick = { onDurationChanged((durationSeconds - 300).coerceAtLeast(MIN_SECONDS)) }) {
                 Text("-5 min")
             }
             Spacer(modifier = Modifier.width(8.dp))
-            TextButton(onClick = { onDurationChanged(durationMinutes + 5) }) {
+            TextButton(onClick = { onDurationChanged((durationSeconds + 300).coerceAtMost(MAX_SECONDS)) }) {
                 Text("+5 min")
             }
         }

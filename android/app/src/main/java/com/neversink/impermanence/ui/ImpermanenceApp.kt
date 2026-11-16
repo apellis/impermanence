@@ -9,10 +9,16 @@ import com.neversink.impermanence.domain.session.TimingSession
 import com.neversink.impermanence.service.SessionEngine
 
 import android.widget.Toast
+import com.neversink.impermanence.data.datastore.UnreadableDaysBackup
+import androidx.compose.ui.res.stringResource
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.AlertDialog
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -133,6 +139,39 @@ fun ImpermanenceApp(appContainer: AppContainer) {
         }
     }
 
+    // Saved days that couldn't be read were replaced by the defaults; say so, and offer the kept copy.
+    val unreadableCopy by UnreadableDaysBackup.pending.collectAsState()
+    val saveUnreadableLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        val source = unreadableCopy
+        UnreadableDaysBackup.dismiss()
+        if (uri == null || source == null) return@rememberLauncherForActivityResult
+        runCatching {
+            context.contentResolver.openOutputStream(uri).use { out ->
+                requireNotNull(out) { "Unable to open destination file." }
+                out.write(source.readBytes())
+            }
+        }.onFailure { error ->
+            Toast.makeText(context, context.getString(R.string.export_failed, error.message ?: ""), Toast.LENGTH_LONG).show()
+        }
+    }
+    unreadableCopy?.let {
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text(stringResource(R.string.unreadable_days_title)) },
+            text = { Text(stringResource(R.string.unreadable_days_message)) },
+            confirmButton = {
+                TextButton(onClick = { saveUnreadableLauncher.launch("impermanence-unreadable-days.json") }) {
+                    Text(stringResource(R.string.unreadable_days_save))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { UnreadableDaysBackup.dismiss() }) { Text(stringResource(R.string.unreadable_days_ok)) }
+            }
+        )
+    }
+
     // If a timing session is running (for example after the process was killed, or after a reboot), the
     // app opens on its screen: being on that screen and timing are the same thing.
     var resumeChecked by rememberSaveable { mutableStateOf(false) }
@@ -159,7 +198,8 @@ fun ImpermanenceApp(appContainer: AppContainer) {
     }
 
     ImpermanenceTheme {
-        Scaffold(modifier = Modifier.fillMaxSize()) { paddingValues ->
+        // Each screen's own Scaffold handles system bar insets; a second Scaffold here doubled them.
+        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             NavHost(
                 navController = navController,
                 startDestination = Destinations.Days,
@@ -168,7 +208,6 @@ fun ImpermanenceApp(appContainer: AppContainer) {
                 composable(Destinations.Days) {
                     DaysScreen(
                         uiState = uiState,
-                        paddingValues = paddingValues,
                         onDaySelected = { dayId -> navController.navigate("${Destinations.DayDetail}/${Uri.encode(dayId)}") },
                         onQuickSit = { navController.navigate(Destinations.QuickSit) },
                         onSettings = { navController.navigate(Destinations.Settings) },
@@ -249,7 +288,6 @@ fun ImpermanenceApp(appContainer: AppContainer) {
 
                 composable(Destinations.QuickSit) {
                     QuickSitScreen(
-                        use24HourClock = uiState.use24HourClock,
                         onClose = {
                             if (navController.currentDestination?.route == Destinations.QuickSit) {
                                 navController.popBackStack()

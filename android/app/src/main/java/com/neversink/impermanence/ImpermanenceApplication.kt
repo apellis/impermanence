@@ -3,6 +3,7 @@ package com.neversink.impermanence
 import android.app.Application
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import com.neversink.impermanence.data.datastore.UnreadableDaysBackup
 import com.neversink.impermanence.data.datastore.dayDataStore
 import com.neversink.impermanence.data.datastore.settingsDataStore
 import com.neversink.impermanence.data.repository.DayRepository
@@ -22,6 +23,7 @@ class ImpermanenceApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        UnreadableDaysBackup.directory = java.io.File(filesDir, "unreadable-days")
         TimingService.createNotificationChannel(this)
         SessionEngine.initialize(this)
         // Re-arm the bell alarm on every process start (an alarm can be lost to a force stop or update).

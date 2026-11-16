@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 and earlier: same rules as data_extraction_rules.xml. -->
+<full-backup-content>
+    <exclude domain="device_sharedpref" path="timing_session.xml" />
+    <exclude domain="device_sharedpref" path="ring_log.xml" />
+    <exclude domain="sharedpref" path="timing_session.xml" />
+    <exclude domain="sharedpref" path="ring_log.xml" />
+    <exclude domain="file" path="unreadable-days/" />
+</full-backup-content>

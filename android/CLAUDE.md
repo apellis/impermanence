@@ -52,6 +52,10 @@ timer alone.
   tests for the engine, alarms, receivers and service.
 * `BellReliabilityDeviceTest` (instrumented) checks real alarm timing with the screen off and the
   device forced into Doze. It runs in CI on the emulator.
+* Every PR runs unit tests, lint, the debug and minified release builds, and the instrumented tests
+  on one emulator (API 34). For major changes and before a release, run the Android workflow by
+  hand from the Actions tab with "full" checked: it runs the instrumented tests on API 26, 29, 31,
+  33, 34 and 35. Physical devices (1 to 2 per OS) are for final checks on the Mac.
 * If the cloud container can't download the Android SDK, the pure logic under `domain/` and `model/`
   can still be compiled and tested with a plain Kotlin JVM build; push a branch and let CI run the
   rest.
