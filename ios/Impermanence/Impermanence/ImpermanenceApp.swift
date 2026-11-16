@@ -6,9 +6,20 @@
 //
 
 import SwiftUI
+import UIKit
+
+final class AppDelegate: NSObject, UIApplicationDelegate {
+    func applicationWillTerminate(_ application: UIApplication) {
+        // Swiping the app away ends any timing session and its bells.
+        MainActor.assumeIsolated {
+            BellEngine.shared.appWillTerminate()
+        }
+    }
+}
 
 @main
 struct ImpermanenceApp : App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var store = DayStore()
     @State private var persistenceErrorMessage: String?
     @State private var pendingSaveTask: Task<Void, Never>?
@@ -55,6 +66,9 @@ struct ImpermanenceApp : App {
         } catch {
             persistenceErrorMessage = "Failed to load saved days. \(error.localizedDescription)"
         }
+        let store = self.store
+        BellEngine.shared.dayProvider = { id in store.days.first { $0.id == id } }
+        await BellEngine.shared.resumeOrCleanUp()
     }
 
     private func saveDays() {

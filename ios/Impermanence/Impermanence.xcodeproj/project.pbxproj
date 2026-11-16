@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		C1A5E0010000000000000002 /* silence.caf in Resources */ = {isa = PBXBuildFile; fileRef = C1A5E0010000000000000001 /* silence.caf */; };
+		C1A5E0010000000000000004 /* BellSchedule.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A5E0010000000000000003 /* BellSchedule.swift */; };
+		C1A5E0010000000000000006 /* BellScheduleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A5E0010000000000000005 /* BellScheduleTests.swift */; };
 		FA89927F2A7EAF5500971377 /* ImpermanenceApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA89927E2A7EAF5500971377 /* ImpermanenceApp.swift */; };
 		FA8992832A7EAF5600971377 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = FA8992822A7EAF5600971377 /* Assets.xcassets */; };
 		FA8992862A7EAF5600971377 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = FA8992852A7EAF5600971377 /* Preview Assets.xcassets */; };
@@ -31,8 +34,8 @@
 		FA8992D82A8C95BC00971377 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA8992D72A8C95BC00971377 /* SettingsView.swift */; };
 		FA8992DA2A8C9A6300971377 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA8992D92A8C9A6300971377 /* AboutView.swift */; };
 		FA8992DC2A8D43C000971377 /* BellPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA8992DB2A8D43C000971377 /* BellPlayer.swift */; };
-		FA8992DE2A8D47EF00971377 /* bell_0.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = FA8992DD2A8D47EF00971377 /* bell_0.mp3 */; };
-		FA8992DF2A8D47EF00971377 /* bell_0.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = FA8992DD2A8D47EF00971377 /* bell_0.mp3 */; };
+		FA8992DE2A8D47EF00971377 /* bell_0.caf in Resources */ = {isa = PBXBuildFile; fileRef = FA8992DD2A8D47EF00971377 /* bell_0.caf */; };
+		FA8992DF2A8D47EF00971377 /* bell_0.caf in Resources */ = {isa = PBXBuildFile; fileRef = FA8992DD2A8D47EF00971377 /* bell_0.caf */; };
 		FA8992E42A8D59A600971377 /* NewDaySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA8992E32A8D59A600971377 /* NewDaySheet.swift */; };
 		FA8992E72A8EC25400971377 /* DayStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA8992E62A8EC25400971377 /* DayStore.swift */; };
 		FA8992F12A9A097D00971377 /* TimeFormatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA8992F02A9A097D00971377 /* TimeFormatting.swift */; };
@@ -85,7 +88,10 @@
 		FA8992D72A8C95BC00971377 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		FA8992D92A8C9A6300971377 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		FA8992DB2A8D43C000971377 /* BellPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BellPlayer.swift; sourceTree = "<group>"; };
-		FA8992DD2A8D47EF00971377 /* bell_0.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; name = bell_0.mp3; path = ../Impermanence/Resources/bell_0.mp3; sourceTree = "<group>"; };
+		FA8992DD2A8D47EF00971377 /* bell_0.caf */ = {isa = PBXFileReference; lastKnownFileType = file; name = bell_0.caf; path = ../Impermanence/Resources/bell_0.caf; sourceTree = "<group>"; };
+		C1A5E0010000000000000001 /* silence.caf */ = {isa = PBXFileReference; lastKnownFileType = file; name = silence.caf; path = ../Impermanence/Resources/silence.caf; sourceTree = "<group>"; };
+		C1A5E0010000000000000003 /* BellSchedule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BellSchedule.swift; sourceTree = "<group>"; };
+		C1A5E0010000000000000005 /* BellScheduleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BellScheduleTests.swift; path = ../../CoreTests/BellScheduleTests.swift; sourceTree = "<group>"; };
 		FA8992E32A8D59A600971377 /* NewDaySheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewDaySheet.swift; sourceTree = "<group>"; };
 		FA8992E62A8EC25400971377 /* DayStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayStore.swift; sourceTree = "<group>"; };
 		FA8992F02A9A097D00971377 /* TimeFormatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeFormatting.swift; sourceTree = "<group>"; };
@@ -177,6 +183,7 @@
 			isa = PBXGroup;
 			children = (
 				FA89928F2A7EAF5600971377 /* ImpermanenceTests.swift */,
+				C1A5E0010000000000000005 /* BellScheduleTests.swift */,
 			);
 			path = ImpermanenceTests;
 			sourceTree = "<group>";
@@ -184,7 +191,8 @@
 		FA8992982A7EAF5600971377 /* ImpermanenceUITests */ = {
 			isa = PBXGroup;
 			children = (
-				FA8992DD2A8D47EF00971377 /* bell_0.mp3 */,
+				FA8992DD2A8D47EF00971377 /* bell_0.caf */,
+				C1A5E0010000000000000001 /* silence.caf */,
 				FA8992992A7EAF5600971377 /* ImpermanenceUITests.swift */,
 				FA89929B2A7EAF5600971377 /* ImpermanenceUITestsLaunchTests.swift */,
 			);
@@ -198,6 +206,7 @@
 				FA8992AB2A7EB07A00971377 /* Day.swift */,
 				FA8992AF2A7EB1BE00971377 /* Bell.swift */,
 				FA8992D12A8ADFF300971377 /* DayTimer.swift */,
+				C1A5E0010000000000000003 /* BellSchedule.swift */,
 				FA8992DB2A8D43C000971377 /* BellPlayer.swift */,
 				FA8992F22A9A1F2F00971377 /* BellCatalog.swift */,
 				FA8992E62A8EC25400971377 /* DayStore.swift */,
@@ -311,7 +320,8 @@
 			files = (
 				FA8992862A7EAF5600971377 /* Preview Assets.xcassets in Resources */,
 				FA8992832A7EAF5600971377 /* Assets.xcassets in Resources */,
-				FA8992DE2A8D47EF00971377 /* bell_0.mp3 in Resources */,
+				FA8992DE2A8D47EF00971377 /* bell_0.caf in Resources */,
+				C1A5E0010000000000000002 /* silence.caf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -326,7 +336,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				FA8992DF2A8D47EF00971377 /* bell_0.mp3 in Resources */,
+				FA8992DF2A8D47EF00971377 /* bell_0.caf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -361,6 +371,7 @@
 				FA89927F2A7EAF5500971377 /* ImpermanenceApp.swift in Sources */,
 				FA8992E72A8EC25400971377 /* DayStore.swift in Sources */,
 				FA8992D22A8ADFF300971377 /* DayTimer.swift in Sources */,
+				C1A5E0010000000000000004 /* BellSchedule.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -369,6 +380,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				FA8992902A7EAF5600971377 /* ImpermanenceTests.swift in Sources */,
+				C1A5E0010000000000000006 /* BellScheduleTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -518,12 +530,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Impermanence/Impermanence.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 					CURRENT_PROJECT_VERSION = 1.4.0;
 				DEVELOPMENT_ASSET_PATHS = "\"Impermanence/Preview Content\"";
 				DEVELOPMENT_TEAM = DBA7U5Z2F6;
 				ENABLE_PREVIEWS = YES;
 					GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Impermanence/Info.plist;
 					INFOPLIST_KEY_CFBundleDisplayName = Impermanence;
 					INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 					INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
@@ -551,12 +565,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Impermanence/Impermanence.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 					CURRENT_PROJECT_VERSION = 1.4.0;
 				DEVELOPMENT_ASSET_PATHS = "\"Impermanence/Preview Content\"";
 				DEVELOPMENT_TEAM = DBA7U5Z2F6;
 				ENABLE_PREVIEWS = YES;
 					GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Impermanence/Info.plist;
 					INFOPLIST_KEY_CFBundleDisplayName = Impermanence;
 					INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 					INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";

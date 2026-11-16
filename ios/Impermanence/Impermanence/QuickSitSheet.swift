@@ -2,20 +2,23 @@ import SwiftUI
 
 struct QuickSitSheet: View {
     @Binding var isPresented: Bool
-    @Environment(\.scenePhase) private var scenePhase
-    @AppStorage("use24HourClock") private var use24HourClock = false
+    @ObservedObject private var engine = BellEngine.shared
 
     @State private var minutes: Int = 15
     @State private var secondsRemaining: Int = 0
-    @State private var isRunning = false
     @State private var selectedBell = BellCatalog.defaultSound.id
     @State private var startChimes = 1
     @State private var endChimes = 1
     @State private var timer: Timer?
-    @State private var sessionStartDate: Date?
+    /// The running sit, if any. Its bells are rung by BellEngine; this view
+    /// only shows progress.
+    @State private var running: TimingSession.QuickSitSession?
+    /// Set when the sit reached its end on its own, so closing the sheet
+    /// lets the end chimes finish instead of cancelling them.
+    @State private var completed = false
 
-    private var totalSeconds: Int { minutes * 60 }
-    private var bellPlayer: BellPlayer { .shared }
+    private var isRunning: Bool { running != nil }
+    private var totalSeconds: Int { running?.durationSeconds ?? minutes * 60 }
     private let presetDurations = [5, 10, 15, 20, 30, 45, 60, 75, 90]
 
     var body: some View {
@@ -65,6 +68,11 @@ struct QuickSitSheet: View {
                 }
 
                 if isRunning {
+                    Section {
+                        BellWarningsView(engine: engine)
+                            .listRowInsets(EdgeInsets())
+                    }
+                    .listRowBackground(Color.clear)
                     Section(header: Text("Progress")) {
                         VStack(alignment: .leading) {
                             ProgressView(value: progress)
@@ -94,33 +102,26 @@ struct QuickSitSheet: View {
                     }
                 }
             }
+            .interactiveDismissDisabled(isRunning)
+            .overlay(alignment: .bottomLeading) { BellEngineDebugStatus() }
             .onDisappear {
-                if scenePhase == .active {
-                    stopTimer()
-                }
-            }
-            .onChange(of: scenePhase) { phase in
-                guard isRunning else {
-                    BellNotificationScheduler.cancelQuickSit()
-                    return
-                }
-
-                switch phase {
-                case .active:
-                    BellNotificationScheduler.cancelQuickSit()
-                    synchronizeFromElapsedTime()
-                case .inactive, .background:
-                    let remaining = max(secondsRemaining, 1)
-                    let bell = Bell(soundId: selectedBell, numRings: endChimes)
-                    BellNotificationScheduler.scheduleQuickSitCompletion(after: TimeInterval(remaining), bell: bell)
-                @unknown default:
-                    break
+                // Leaving Quick Sit ends it: no more bells. A sit that just
+                // completed keeps its end chimes.
+                timer?.invalidate()
+                timer = nil
+                if isRunning && !completed {
+                    engine.endSession()
                 }
             }
             .onAppear {
-                selectedBell = BellCatalog.defaultSound.id
-                startChimes = 1
-                endChimes = 1
+                if case .quickSit(let s)? = engine.session {
+                    // Resumed after iOS ended the app mid-sit.
+                    attach(to: s)
+                } else {
+                    selectedBell = BellCatalog.defaultSound.id
+                    startChimes = 1
+                    endChimes = 1
+                }
             }
         }
     }
@@ -181,59 +182,56 @@ struct QuickSitSheet: View {
     }
 
     private func startSession() {
-        BellNotificationScheduler.prepareAuthorization()
-        BellNotificationScheduler.cancelQuickSit()
-        secondsRemaining = totalSeconds
-        isRunning = true
-        sessionStartDate = Date()
-        playBell(chimes: startChimes)
-
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-            tick()
-        }
-        timer?.tolerance = 0.2
+        completed = false
+        let session = engine.startQuickSit(minutes: minutes, soundId: selectedBell,
+                                           startChimes: startChimes, endChimes: endChimes)
+        attach(to: session)
     }
 
-    private func tick() {
-        guard secondsRemaining > 0 else {
-            finishSession()
-            return
+    private func attach(to session: TimingSession.QuickSitSession) {
+        running = session
+        minutes = session.durationSeconds / 60
+        selectedBell = session.soundId
+        startChimes = session.startChimes
+        endChimes = session.endChimes
+        refreshRemaining()
+        timer?.invalidate()
+        let t = Timer(timeInterval: 0.25, repeats: true) { _ in
+            refreshRemaining()
         }
-        secondsRemaining -= 1
+        t.tolerance = 0.05
+        RunLoop.main.add(t, forMode: .common)
+        timer = t
+    }
+
+    /// Remaining time always comes from the wall clock, so it never drifts
+    /// and is right after the app was in the background.
+    private func refreshRemaining() {
+        guard let running else { return }
+        let remaining = running.endsAt.timeIntervalSinceNow
+        secondsRemaining = max(0, Int(remaining.rounded(.up)))
+        if remaining <= 0 {
+            finishSession()
+        }
     }
 
     private func finishSession() {
-        stopTimer()
-        playBell(chimes: endChimes)
+        // BellEngine rings the end chimes and then ends the session itself.
+        completed = true
+        timer?.invalidate()
+        timer = nil
+        running = nil
         isPresented = false
     }
 
     private func stopTimer() {
         timer?.invalidate()
         timer = nil
-        BellNotificationScheduler.cancelQuickSit()
-        isRunning = false
-        sessionStartDate = nil
-    }
-
-    private func synchronizeFromElapsedTime() {
-        guard isRunning, let sessionStartDate else { return }
-
-        let elapsed = Int(Date.now.timeIntervalSince(sessionStartDate).rounded(.down))
-        let remaining = max(0, totalSeconds - elapsed)
-
-        if remaining == 0 {
-            stopTimer()
-            isPresented = false
-            return
+        if isRunning {
+            engine.endSession()
         }
-
-        secondsRemaining = remaining
-    }
-
-    private func playBell(chimes: Int) {
-        let bell = Bell(soundId: selectedBell, numRings: chimes)
-        bellPlayer.play(bell: bell)
+        running = nil
+        completed = false
     }
 }
 

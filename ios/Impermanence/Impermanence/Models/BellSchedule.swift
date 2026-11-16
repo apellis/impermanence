@@ -215,7 +215,11 @@ enum DaySchedule {
         }
 
         var result: [BellEvent] = []
-        var date = anchor
+        // Start a few days before the window rather than at the anchor, so a
+        // session that has looped for weeks stays cheap. Three days of lead
+        // is enough for the overlap rule unless a day lasts over 72 hours.
+        let lead = CalendarDay(containing: lower, calendar: calendar).adding(days: -3, calendar: calendar)
+        var date = max(anchor, lead)
         var previousEnd: Date? = nil
         // Walk occurrences from the anchor until they start after the window.
         // The bound keeps a pathological plan from looping forever.

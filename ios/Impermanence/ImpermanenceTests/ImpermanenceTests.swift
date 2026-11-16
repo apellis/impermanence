@@ -11,70 +11,60 @@ import XCTest
 final class ImpermanenceTests: XCTestCase {
 
     @MainActor
-    func testDayTimerRingsStartAndEndBells() {
-        let startBell = Bell(soundId: 0, numRings: 2)
-        let endBell = Bell(soundId: 0, numRings: 3)
-        let segment = Day.Segment(name: "Meditate", duration: 60, customEndBell: endBell)
-        let referenceDate = Date(timeIntervalSinceReferenceDate: 1_000)
-        let startOfDay = Calendar.current.startOfDay(for: referenceDate)
-        let startOffset = referenceDate.timeIntervalSince(startOfDay) + 30
+    func testDayTimerTracksSegmentsFromWallClock() {
+        let segment = Day.Segment(name: "Meditate", duration: 60)
+        let day = Day(name: "T", startTime: 0, segments: [segment])
+        let calendar = Calendar.autoupdatingCurrent
+        let reference = Date(timeIntervalSince1970: 1_781_000_000)
+        let anchor = CalendarDay(containing: reference, calendar: calendar)
+        let start = DaySchedule.occurrence(of: day, on: anchor, calendar: calendar).start
 
-        let timer = DayTimer(
-            startTime: startOffset,
-            segments: [segment],
-            startBell: startBell,
-            defaultBell: .singleBell,
-            loopDays: false,
-            currentDate: referenceDate
-        )
-
-        var capturedBells: [Bell] = []
-        timer.segmentChangedAction = { bell in
-            if let bell {
-                capturedBells.append(bell)
-            }
-        }
-
-        timer.refresh(now: referenceDate)
-        timer.refresh(now: referenceDate.addingTimeInterval(31))
-        timer.refresh(now: referenceDate.addingTimeInterval(91))
-
-        XCTAssertEqual(capturedBells, [startBell, endBell])
+        let timer = DayTimer(day: day, loopDays: false, anchor: anchor, now: start.addingTimeInterval(-5))
+        XCTAssertEqual(timer.segmentIndex, -1)
+        timer.refresh(now: start.addingTimeInterval(10))
+        XCTAssertEqual(timer.segmentIndex, 0)
+        XCTAssertEqual(timer.segmentText, "Now: Meditate")
+        XCTAssertEqual(timer.progress.remaining, 50)
+        timer.refresh(now: start.addingTimeInterval(61))
+        XCTAssertEqual(timer.segmentIndex, 1)
+        XCTAssertEqual(timer.segmentText, "(Day is over)")
     }
 
     @MainActor
-    func testDayTimerRespectsLoopSetting() throws {
-        let segment = Day.Segment(name: "Meditate", duration: 60)
-        let referenceDate = Date(timeIntervalSinceReferenceDate: 2_000)
+    func testDayTimerLoopsToTheNextDayOnlyWhenLooping() throws {
+        let day = Day(name: "T", startTime: 3600, segments: [Day.Segment(name: "Sit", duration: 60)])
+        let calendar = Calendar.autoupdatingCurrent
+        let reference = Date(timeIntervalSince1970: 1_781_000_000)
+        let anchor = CalendarDay(containing: reference, calendar: calendar)
+        let nextDay = try XCTUnwrap(calendar.date(byAdding: .day, value: 1, to: anchor.noon(in: calendar)))
 
-        let loopingTimer = DayTimer(
-            startTime: 0,
-            segments: [segment],
-            startBell: .singleBell,
-            defaultBell: .singleBell,
-            loopDays: true,
-            currentDate: referenceDate
-        )
-        let nonLoopingTimer = DayTimer(
-            startTime: 0,
-            segments: [segment],
-            startBell: .singleBell,
-            defaultBell: .singleBell,
-            loopDays: false,
-            currentDate: referenceDate
-        )
+        let looping = DayTimer(day: day, loopDays: true, anchor: anchor, now: reference)
+        looping.refresh(now: nextDay)
+        XCTAssertEqual(looping.progress.occurrence?.date, CalendarDay(containing: nextDay, calendar: calendar))
 
-        let originalLoopingStart = loopingTimer.startTime
-        let originalNonLoopingStart = nonLoopingTimer.startTime
+        let single = DayTimer(day: day, loopDays: false, anchor: anchor, now: reference)
+        single.refresh(now: nextDay)
+        XCTAssertEqual(single.progress.occurrence?.date, anchor)
+        XCTAssertEqual(single.segmentText, "(Day is over)")
+    }
 
-        let oneDayLater = referenceDate.addingTimeInterval(86_400 + 120)
+    @MainActor
+    func testDayTimerEmptyDay() {
+        let timer = DayTimer(day: Day(name: "E", startTime: 0, segments: []), loopDays: true)
+        XCTAssertEqual(timer.segmentIndex, -2)
+        XCTAssertEqual(timer.segmentText, "(Day is empty)")
+    }
 
-        loopingTimer.refresh(now: oneDayLater)
-        nonLoopingTimer.refresh(now: oneDayLater)
+    func testBundledSoundsExist() {
+        for sound in BellCatalog.sounds {
+            XCTAssertNotNil(sound.url, "missing \(sound.fileName)")
+        }
+        XCTAssertNotNil(Bundle.main.url(forResource: "silence", withExtension: "caf"))
+    }
 
-        let expectedLoopingStart = try XCTUnwrap(Calendar.current.date(byAdding: .day, value: 1, to: originalLoopingStart))
-        XCTAssertEqual(loopingTimer.startTime, expectedLoopingStart)
-        XCTAssertEqual(nonLoopingTimer.startTime, originalNonLoopingStart)
+    func testBackgroundAudioModeIsDeclared() {
+        let modes = Bundle.main.object(forInfoDictionaryKey: "UIBackgroundModes") as? [String]
+        XCTAssertEqual(modes, ["audio"])
     }
 
     func testSegmentSchedulesMatchesSegments() {
@@ -204,24 +194,5 @@ final class ImpermanenceTests: XCTestCase {
         let unsafeBell = Bell(soundId: 77, numRings: 50_000).sanitized()
         XCTAssertEqual(unsafeBell.soundId, Bell.singleBell.soundId)
         XCTAssertEqual(unsafeBell.numRings, Bell.maxRings)
-    }
-
-    @MainActor
-    func testDayTimerAlignsDriftedScheduleToCurrentDayInOneRefresh() throws {
-        let segment = Day.Segment(name: "Sit", duration: 60)
-        let referenceDate = Date(timeIntervalSinceReferenceDate: 10_000)
-        let timer = DayTimer(
-            startTime: 0,
-            segments: [segment],
-            startBell: .singleBell,
-            defaultBell: .singleBell,
-            loopDays: true,
-            currentDate: referenceDate
-        )
-
-        let fortyDaysLater = try XCTUnwrap(Calendar.current.date(byAdding: .day, value: 40, to: referenceDate))
-        timer.refresh(now: fortyDaysLater)
-
-        XCTAssertTrue(Calendar.current.isDate(timer.startTime, equalTo: fortyDaysLater, toGranularity: .day))
     }
 }
