@@ -135,6 +135,9 @@ final class BellEngine: NSObject, ObservableObject {
     /// notifications left by an earlier version or an abrupt exit.
     func resumeOrCleanUp() async {
         guard session == nil else { return }
+        if Self.isUITesting, ProcessInfo.processInfo.arguments.contains("--uitesting-reset-session") {
+            persistSession(nil)
+        }
         guard let data = defaults.data(forKey: Self.sessionKey),
               let saved = try? JSONDecoder().decode(TimingSession.self, from: data) else {
             removeAllChimeNotifications(includingLegacy: true)

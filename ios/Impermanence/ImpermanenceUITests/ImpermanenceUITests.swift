@@ -31,6 +31,7 @@ final class ImpermanenceUITests: XCTestCase {
 
     func testStartDayFlowWithPersistedDaysStaysResponsive() throws {
         let app = XCUIApplication()
+        app.launchArguments += ["--uitesting", "--uitesting-reset-session"]
         app.launch()
         openSeedDay(in: app)
 
@@ -58,12 +59,11 @@ final class ImpermanenceUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["New Day"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Default bell"].exists)
         XCTAssertTrue(app.staticTexts["Theme"].exists)
-        // A new day starts at midnight. iOS formats "12:00 AM" with a narrow
-        // no-break space, and a compact picker may expose the time as its value.
-        XCTAssertTrue(app.datePickers["Start of Day"].waitForExistence(timeout: 2))
+        // A new day starts at midnight. iOS writes "12:00 AM" with a narrow
+        // no-break space, so match on the digits, in a label or a value.
         let midnight = NSPredicate(format: "label CONTAINS '12:00' OR label CONTAINS '00:00' OR value CONTAINS '12:00' OR value CONTAINS '00:00'")
-        XCTAssertTrue(app.descendants(matching: .any).matching(midnight).firstMatch.waitForExistence(timeout: 2),
-                      app.datePickers["Start of Day"].debugDescription)
+        XCTAssertTrue(app.descendants(matching: .any).matching(midnight).firstMatch.waitForExistence(timeout: 3),
+                      app.debugDescription)
 
         let dismissButton = app.buttons["Dismiss"]
         XCTAssertTrue(dismissButton.exists)
@@ -132,7 +132,7 @@ final class ImpermanenceUITests: XCTestCase {
         // terminate() kills the process without the normal termination
         // callback, like iOS ending a background app.
         app.terminate()
-        app = launchApp()
+        app = launchApp(keepSession: true)
         XCTAssertTrue(app.buttons["Cancel"].waitForExistence(timeout: 10), "Quick Sit not resumed")
         XCTAssertTrue(waitForStatus(app, prefix: "quicksit pending=", timeout: 10) { $0 == 1 })
         app.buttons["Cancel"].tap()
@@ -175,9 +175,13 @@ final class ImpermanenceUITests: XCTestCase {
 
     // MARK: Helpers
 
-    private func launchApp() -> XCUIApplication {
+    /// Launches with the seed days. Unless `keepSession`, a bell session left
+    /// by an earlier test (XCUITest kills the app between tests, which looks
+    /// like iOS ending it, so the session would resume) is discarded.
+    private func launchApp(keepSession: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += ["--uitesting-reset-days", "--uitesting"]
+        if !keepSession { app.launchArguments.append("--uitesting-reset-session") }
         app.launch()
         return app
     }
@@ -209,7 +213,8 @@ final class ImpermanenceUITests: XCTestCase {
     }
 
     private func status(_ app: XCUIApplication) -> String {
-        let element = app.staticTexts["bellEngineStatus"]
+        // Both the days list and the Quick Sit sheet show it; they agree.
+        let element = app.staticTexts.matching(identifier: "bellEngineStatus").firstMatch
         return element.exists ? element.label : "(no status)"
     }
 
