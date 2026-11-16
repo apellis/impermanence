@@ -25,6 +25,9 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            // Signed with the debug key until store signing is set up, so the minified build can be
+            // installed for device QA (`./gradlew installRelease`). Not for distribution.
+            signingConfig = signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

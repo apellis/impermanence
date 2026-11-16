@@ -40,7 +40,7 @@
     <string name="warning_battery_optimized_action">Turn off for Impermanence</string>
     <string name="warning_notifications_off">Notifications are off. Bells still ring, but you won\'t see or be able to stop the timer from the notification shade.</string>
     <string name="unreadable_days_title">Unable to read saved days</string>
-    <string name="unreadable_days_message">Your saved days couldn\'t be read, so the default days were restored. A copy of the unreadable file was kept, and you can save it to send for recovery.</string>
+    <string name="unreadable_days_message">Your saved days couldn\'t be read, so the app started with no days. A copy of the unreadable file was kept, and you can save it to send for recovery.</string>
     <string name="unreadable_days_save">Save copy</string>
     <string name="unreadable_days_ok">OK</string>
 </resources>

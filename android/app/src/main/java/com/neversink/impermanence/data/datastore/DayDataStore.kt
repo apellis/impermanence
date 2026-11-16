@@ -11,8 +11,9 @@ val Context.dayDataStore: DataStore<List<Day>> by dataStore(
     fileName = "days.json",
     serializer = DayListSerializer,
     corruptionHandler = ReplaceFileCorruptionHandler { exception ->
-        // Unreadable saved days must never crash the app: fall back to the seed days.
-        Log.e("DayDataStore", "days.json is unreadable; restoring default days", exception)
-        DayListSerializer.defaultValue
+        // Unreadable saved days must never crash the app. Start with an empty list (docs/BEHAVIOR.md);
+        // the serializer already kept a copy of the file for the person to save.
+        Log.e("DayDataStore", "days.json is unreadable; starting with no days", exception)
+        emptyList()
     }
 )
