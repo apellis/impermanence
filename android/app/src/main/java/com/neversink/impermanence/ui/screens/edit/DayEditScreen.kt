@@ -39,7 +39,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -82,12 +81,6 @@ fun DayEditScreen(
         )
     }
 
-    LaunchedEffect(editingDay.defaultBell.soundId, editingDay.defaultBell.numRings) {
-        editingDay = editingDay.copy(
-            startBell = editingDay.defaultBell,
-            manualBell = editingDay.defaultBell
-        )
-    }
 
     val canSave = editingDay.name.isNotBlank() && editingDay.segments.isNotEmpty()
 
@@ -142,7 +135,11 @@ fun DayEditScreen(
                     BellSelectionControl(
                         title = "Default bell",
                         bell = editingDay.defaultBell,
-                        onBellChange = { bell -> editingDay = editingDay.copy(defaultBell = bell) }
+                        onBellChange = { bell ->
+                            // iOS: changing the default bell also sets the start and manual bells. Only an
+                            // actual change does this; opening and saving a day leaves them alone.
+                            editingDay = editingDay.copy(defaultBell = bell, startBell = bell, manualBell = bell)
+                        }
                     )
                 }
             }

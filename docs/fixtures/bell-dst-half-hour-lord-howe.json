@@ -1,0 +1,64 @@
+{
+  "name": "dst-half-hour-lord-howe",
+  "description": "Lord Howe Island moves 30 minutes (02:00 -> 02:30 on 2026-10-04); start 02:15 becomes 02:45.",
+  "zone": "Australia/Lord_Howe",
+  "loopDays": false,
+  "sessionStart": "2026-10-03T13:30:00Z",
+  "until": "2026-10-04T01:00:00Z",
+  "day": {
+    "id": "CE00918B-4FA6-5EE1-99A2-F62DBAEDF42D",
+    "name": "Half-hour shift",
+    "startTimeSeconds": 8100,
+    "segments": [
+      {
+        "id": "3287F35A-E53B-5536-9E9E-762463DA11BA",
+        "name": "Segment 1",
+        "durationSeconds": 1800
+      },
+      {
+        "id": "0CB1879C-A861-5820-B1CE-3FFD5E2BD866",
+        "name": "Segment 2",
+        "durationSeconds": 1800
+      }
+    ],
+    "startBell": {
+      "soundId": 0,
+      "numRings": 1
+    },
+    "manualBell": {
+      "soundId": 0,
+      "numRings": 1
+    },
+    "defaultBell": {
+      "soundId": 0,
+      "numRings": 1
+    },
+    "theme": "teal"
+  },
+  "expectedEvents": [
+    {
+      "instant": "2026-10-03T15:45:00Z",
+      "local": "2026-10-04 02:45:00 +11",
+      "kind": "start",
+      "segmentIndex": 0,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-10-03T16:15:00Z",
+      "local": "2026-10-04 03:15:00 +11",
+      "kind": "end",
+      "segmentIndex": 0,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-10-03T16:45:00Z",
+      "local": "2026-10-04 03:45:00 +11",
+      "kind": "end",
+      "segmentIndex": 1,
+      "numRings": 1,
+      "soundId": 0
+    }
+  ]
+}

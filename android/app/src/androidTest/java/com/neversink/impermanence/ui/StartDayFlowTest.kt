@@ -9,15 +9,40 @@ import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.neversink.impermanence.MainActivity
 import org.junit.Assume.assumeTrue
+import android.Manifest
+import android.os.Build
+import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.rule.GrantPermissionRule
+import com.neversink.impermanence.service.SessionEngine
+import org.junit.After
 import org.junit.Rule
+import org.junit.rules.TestRule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class StartDayFlowTest {
 
-    @get:Rule
+    // Granted up front so the notification permission prompt can't cover the screen under test.
+    @get:Rule(order = 0)
+    val notifications: TestRule =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            GrantPermissionRule.grant(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            TestRule { base, _ -> base }
+        }
+
+    @get:Rule(order = 1)
     val composeRule = createAndroidComposeRule<MainActivity>()
+
+    // A session left running would make the next test's launch resume it.
+    @After
+    fun endSession() {
+        SessionEngine.end(
+            InstrumentationRegistry.getInstrumentation().targetContext,
+            SessionEngine.EndReason.LEFT_SCREEN
+        )
+    }
 
     @Test
     fun startDayFromDetailShowsActiveScreen() {

@@ -1,12 +1,11 @@
 package com.neversink.impermanence.data.portability
 
-import com.neversink.impermanence.model.Bell
 import com.neversink.impermanence.model.Day
+import com.neversink.impermanence.model.DaySanitizer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
-import kotlin.math.max
 
 @Serializable
 data class PortableDayPlanFile(
@@ -50,31 +49,5 @@ object PortableDayPlanCodec {
         throw SerializationException("Invalid day plan file format")
     }
 
-    private fun sanitize(days: List<Day>): List<Day> {
-        return days.map { day ->
-            day.copy(
-                startTimeSeconds = normalizeDaySeconds(day.startTimeSeconds),
-                segments = day.segments.map { segment ->
-                    segment.copy(
-                        durationSeconds = max(1, segment.durationSeconds),
-                        customEndBell = segment.customEndBell?.sanitize()
-                    )
-                },
-                startBell = day.startBell.sanitize(),
-                manualBell = day.manualBell.sanitize(),
-                defaultBell = day.defaultBell.sanitize()
-            )
-        }
-    }
-
-    private fun Bell.sanitize(): Bell {
-        return copy(numRings = numRings.coerceAtLeast(1))
-    }
-
-    private fun normalizeDaySeconds(seconds: Int): Int {
-        val mod = seconds % SECONDS_PER_DAY
-        return if (mod < 0) mod + SECONDS_PER_DAY else mod
-    }
-
-    private const val SECONDS_PER_DAY = 24 * 60 * 60
+    private fun sanitize(days: List<Day>): List<Day> = DaySanitizer.sanitize(days)
 }

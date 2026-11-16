@@ -30,17 +30,6 @@ data class Day(
         }
     }
 
-    fun currentSegment(now: Long): Pair<Segment, Long>? {
-        val nowSeconds = ((now / 1000L) % 86400).toInt()
-        segmentSchedule().zip(segments).firstOrNull { (schedule, _) ->
-            nowSeconds in schedule.first until schedule.second
-        }?.let { (schedule, segment) ->
-            val remaining = schedule.second - nowSeconds
-            return segment to remaining.toLong()
-        }
-        return null
-    }
-
     fun copyWith(segments: List<Segment> = this.segments): Day = copy(segments = segments)
 
     @Serializable

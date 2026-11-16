@@ -1,5 +1,13 @@
 package com.neversink.impermanence.ui
 
+import android.net.Uri
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import com.neversink.impermanence.domain.session.TimingSession
+import com.neversink.impermanence.service.SessionEngine
+
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -41,6 +49,28 @@ object Destinations {
     const val About = "about"
 }
 
+private const val MAX_IMPORT_BYTES = 5 * 1024 * 1024
+
+private fun java.io.InputStream.readNBytesCompat(limit: Int): ByteArray {
+    val out = java.io.ByteArrayOutputStream()
+    val buffer = ByteArray(16 * 1024)
+    while (out.size() < limit) {
+        val read = read(buffer, 0, minOf(buffer.size, limit - out.size()))
+        if (read < 0) break
+        out.write(buffer, 0, read)
+    }
+    return out.toByteArray()
+}
+
+@Composable
+private fun PopWhenMissing(isLoading: Boolean, pop: () -> Unit) {
+    // Never navigate during composition, and never before saved days have loaded (after process death
+    // the restored screen must not be popped just because the list is still empty).
+    LaunchedEffect(isLoading) {
+        if (!isLoading) pop()
+    }
+}
+
 @Composable
 fun ImpermanenceApp(appContainer: AppContainer) {
     val navController = rememberNavController()
@@ -53,9 +83,11 @@ fun ImpermanenceApp(appContainer: AppContainer) {
     ) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         runCatching {
-            val text = context.contentResolver.openInputStream(uri)?.bufferedReader().use { reader ->
-                requireNotNull(reader) { "Unable to open selected file." }
-                reader.readText()
+            val text = context.contentResolver.openInputStream(uri).use { input ->
+                requireNotNull(input) { "Unable to open selected file." }
+                val bytes = input.readNBytesCompat(MAX_IMPORT_BYTES + 1)
+                require(bytes.size <= MAX_IMPORT_BYTES) { "File is too large to be a day plan export." }
+                bytes.decodeToString()
             }
             PortableDayPlanCodec.decode(text)
         }.onSuccess { importedDays ->
@@ -101,6 +133,31 @@ fun ImpermanenceApp(appContainer: AppContainer) {
         }
     }
 
+    // If a timing session is running (for example after the process was killed, or after a reboot), the
+    // app opens on its screen: being on that screen and timing are the same thing.
+    var resumeChecked by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(uiState.isLoading) {
+        if (uiState.isLoading || resumeChecked) return@LaunchedEffect
+        resumeChecked = true
+        val route = navController.currentBackStackEntry?.destination?.route
+        when (val session = SessionEngine.session.value) {
+            is TimingSession.DaySession -> {
+                val onActive = route?.startsWith(Destinations.DayActive) == true
+                if (!onActive) {
+                    if (uiState.days.any { it.id == session.day.id }) {
+                        navController.navigate("${Destinations.DayActive}/${Uri.encode(session.day.id)}")
+                    } else {
+                        SessionEngine.end(context, SessionEngine.EndReason.LEFT_SCREEN)
+                    }
+                }
+            }
+            is TimingSession.QuickSitSession -> {
+                if (route != Destinations.QuickSit) navController.navigate(Destinations.QuickSit)
+            }
+            null -> Unit
+        }
+    }
+
     ImpermanenceTheme {
         Scaffold(modifier = Modifier.fillMaxSize()) { paddingValues ->
             NavHost(
@@ -112,7 +169,7 @@ fun ImpermanenceApp(appContainer: AppContainer) {
                     DaysScreen(
                         uiState = uiState,
                         paddingValues = paddingValues,
-                        onDaySelected = { dayId -> navController.navigate("${Destinations.DayDetail}/$dayId") },
+                        onDaySelected = { dayId -> navController.navigate("${Destinations.DayDetail}/${Uri.encode(dayId)}") },
                         onQuickSit = { navController.navigate(Destinations.QuickSit) },
                         onSettings = { navController.navigate(Destinations.Settings) },
                         onAbout = { navController.navigate(Destinations.About) },
@@ -132,12 +189,12 @@ fun ImpermanenceApp(appContainer: AppContainer) {
                         DayDetailScreen(
                             day = day,
                             use24HourClock = uiState.use24HourClock,
-                            onEdit = { navController.navigate("${Destinations.DayEdit}?dayId=${day.id}") },
-                            onStart = { navController.navigate("${Destinations.DayActive}/$dayId") },
+                            onEdit = { navController.navigate("${Destinations.DayEdit}?dayId=${Uri.encode(day.id)}") },
+                            onStart = { navController.navigate("${Destinations.DayActive}/${Uri.encode(day.id)}") },
                             onBack = { navController.popBackStack() }
                         )
                     } else {
-                        navController.popBackStack()
+                        PopWhenMissing(isLoading = uiState.isLoading) { navController.popBackStack() }
                     }
                 }
 
@@ -153,11 +210,15 @@ fun ImpermanenceApp(appContainer: AppContainer) {
                             loopDays = uiState.loopDays,
                             keepScreenAwakeDuringDay = uiState.keepScreenAwakeDuringDay,
                             use24HourClock = uiState.use24HourClock,
-                            onExit = { navController.popBackStack() },
+                            onExit = {
+                                if (navController.currentDestination?.route?.startsWith(Destinations.DayActive) == true) {
+                                    navController.popBackStack()
+                                }
+                            },
                             onManualBellChange = appViewModel::updateDay
                         )
                     } else {
-                        navController.popBackStack()
+                        PopWhenMissing(isLoading = uiState.isLoading) { navController.popBackStack() }
                     }
                 }
 
@@ -189,7 +250,11 @@ fun ImpermanenceApp(appContainer: AppContainer) {
                 composable(Destinations.QuickSit) {
                     QuickSitScreen(
                         use24HourClock = uiState.use24HourClock,
-                        onClose = { navController.popBackStack() }
+                        onClose = {
+                            if (navController.currentDestination?.route == Destinations.QuickSit) {
+                                navController.popBackStack()
+                            }
+                        }
                     )
                 }
 

@@ -48,7 +48,11 @@ import com.neversink.impermanence.domain.audio.BellPlayer
 import com.neversink.impermanence.model.Bell
 import com.neversink.impermanence.model.BellCatalog
 import com.neversink.impermanence.model.Day
-import com.neversink.impermanence.domain.timer.DayTimerEngine
+import com.neversink.impermanence.domain.timer.DaySchedule
+import com.neversink.impermanence.ui.components.BellHealthBanner
+import com.neversink.impermanence.ui.components.RequestNotificationPermission
+import java.time.Instant
+import java.time.ZoneId
 import com.neversink.impermanence.ui.components.SegmentCard
 import com.neversink.impermanence.ui.theme.AppUiTokens
 import com.neversink.impermanence.ui.viewmodel.DayActiveViewModel
@@ -70,7 +74,12 @@ fun DayActiveScreen(
     val viewModel: DayActiveViewModel = viewModel(
         factory = DayActiveViewModel.provideFactory(application, day, loopDays)
     )
-    val timerState by viewModel.timerState.collectAsState()
+    val timerState by viewModel.displayState.collectAsState()
+    val endedExternally by viewModel.endedExternally.collectAsState()
+    LaunchedEffect(endedExternally) {
+        if (endedExternally) onExit()
+    }
+    RequestNotificationPermission()
     var manualBell by remember(day.id) { mutableStateOf(day.manualBell) }
     var isManualBellMenuExpanded by remember { mutableStateOf(false) }
 
@@ -83,8 +92,8 @@ fun DayActiveScreen(
         viewModel.updateLoopDays(loopDays)
     }
 
-    val activeSession = timerState.status != DayTimerEngine.TimerStatus.COMPLETE &&
-        timerState.status != DayTimerEngine.TimerStatus.EMPTY
+    val activeSession = timerState.status != DaySchedule.Status.COMPLETE &&
+        timerState.status != DaySchedule.Status.EMPTY
     KeepScreenOn(active = keepScreenAwakeDuringDay && activeSession)
 
     Scaffold(
@@ -178,13 +187,14 @@ fun DayActiveScreen(
         }
     ) { padding ->
         val displayDay = day.copy(manualBell = manualBell)
-        val schedule = displayDay.segmentSchedule()
-        val nextBellSeconds = when (timerState.status) {
-            DayTimerEngine.TimerStatus.NOT_STARTED -> schedule.firstOrNull()?.first
-            DayTimerEngine.TimerStatus.ACTIVE -> schedule.getOrNull(timerState.segmentIndex)?.second
-            else -> null
+        val zone = ZoneId.systemDefault()
+        // Times shown are the real instants of the occurrence being timed (DST-correct).
+        val occurrenceWindows = timerState.occurrence?.segments
+        val schedule = occurrenceWindows?.map { secondsOfDay(it.startMillis, zone) to secondsOfDay(it.endMillis, zone) }
+            ?: displayDay.segmentSchedule()
+        val nextBellText = timerState.nextEvent?.let {
+            TimeFormatting.formattedTimeFromSeconds(secondsOfDay(it.atMillis, zone), use24HourClock)
         }
-        val nextBellText = nextBellSeconds?.let { TimeFormatting.formattedTimeFromSeconds(it, use24HourClock) }
         LazyColumn(
             modifier = Modifier
                 .padding(padding)
@@ -193,20 +203,24 @@ fun DayActiveScreen(
             verticalArrangement = Arrangement.spacedBy(AppUiTokens.SectionSpacing)
         ) {
             item {
+                BellHealthBanner()
+            }
+
+            item {
                 ActiveDaySummaryCard(
-                    activeSegmentName = timerState.activeSegmentName,
+                    activeSegmentName = timerState.segmentText,
                     status = timerState.status,
-                    activeSegmentTimeRemaining = timerState.activeSegmentTimeRemaining,
+                    activeSegmentTimeRemaining = timerState.remainingSeconds,
                     nextBellText = nextBellText,
                     accentColor = day.theme.accentColor
                 )
             }
 
-            if (timerState.activeSegmentTimeElapsed >= 0 && timerState.activeSegmentTimeRemaining >= 0) {
+            if (timerState.elapsedSeconds >= 0 && timerState.remainingSeconds >= 0) {
                 item {
                     SegmentProgress(
-                        elapsedSeconds = timerState.activeSegmentTimeElapsed,
-                        remainingSeconds = timerState.activeSegmentTimeRemaining,
+                        elapsedSeconds = timerState.elapsedSeconds,
+                        remainingSeconds = timerState.remainingSeconds,
                         accentColor = day.theme.accentColor
                     )
                 }
@@ -242,7 +256,7 @@ fun DayActiveScreen(
 @Composable
 private fun ActiveDaySummaryCard(
     activeSegmentName: String,
-    status: DayTimerEngine.TimerStatus,
+    status: DaySchedule.Status,
     activeSegmentTimeRemaining: Long,
     nextBellText: String?,
     accentColor: Color
@@ -261,10 +275,10 @@ private fun ActiveDaySummaryCard(
         ) {
             Text(
                 text = when (status) {
-                    DayTimerEngine.TimerStatus.ACTIVE -> "Now"
-                    DayTimerEngine.TimerStatus.NOT_STARTED -> "Day queued"
-                    DayTimerEngine.TimerStatus.COMPLETE -> "Complete"
-                    DayTimerEngine.TimerStatus.EMPTY -> "Empty"
+                    DaySchedule.Status.ACTIVE -> "Now"
+                    DaySchedule.Status.NOT_STARTED -> "Day queued"
+                    DaySchedule.Status.COMPLETE -> "Complete"
+                    DaySchedule.Status.EMPTY -> "Empty"
                 },
                 style = MaterialTheme.typography.labelLarge,
                 color = accentColor
@@ -274,7 +288,7 @@ private fun ActiveDaySummaryCard(
                 style = MaterialTheme.typography.headlineSmall,
                 color = accentColor
             )
-            if (status == DayTimerEngine.TimerStatus.ACTIVE && activeSegmentTimeRemaining >= 0) {
+            if (status == DaySchedule.Status.ACTIVE && activeSegmentTimeRemaining >= 0) {
                 Text(
                     text = "Remaining ${formatDuration(activeSegmentTimeRemaining)}",
                     style = MaterialTheme.typography.titleMedium,
@@ -332,13 +346,13 @@ private fun SegmentProgress(
     }
 }
 
+private fun secondsOfDay(epochMillis: Long, zone: ZoneId): Int =
+    Instant.ofEpochMilli(epochMillis).atZone(zone).toLocalTime().toSecondOfDay()
+
 private fun formatDuration(seconds: Long): String {
     val totalSeconds = seconds.coerceAtLeast(0)
     val hours = totalSeconds / 3600
     val minutes = (totalSeconds % 3600) / 60
     val secs = totalSeconds % 60
-    return when {
-        hours > 0 -> String.format("%d:%02d:%02d", hours, minutes, secs)
-        else -> String.format("%02d:%02d", minutes, secs)
-    }
+    return String.format(java.util.Locale.US, "%02d:%02d:%02d", hours, minutes, secs)
 }

@@ -1,8 +1,9 @@
 package com.neversink.impermanence.ui.screens.quick
 
-import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -39,10 +40,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.neversink.impermanence.domain.audio.BellPlayer
-import com.neversink.impermanence.model.Bell
 import com.neversink.impermanence.model.BellCatalog
-import com.neversink.impermanence.service.QuickSitAlarmScheduler
+import com.neversink.impermanence.domain.session.TimingSession
+import com.neversink.impermanence.service.SessionEngine
+import com.neversink.impermanence.ui.components.BellHealthBanner
+import com.neversink.impermanence.ui.components.RequestNotificationPermission
+import androidx.compose.runtime.collectAsState
 import kotlinx.coroutines.delay
 import kotlin.math.ceil
 
@@ -53,79 +56,61 @@ fun QuickSitScreen(
     onClose: () -> Unit
 ) {
     val context = LocalContext.current
+    val session by SessionEngine.session.collectAsState()
+    val quickSit = session as? TimingSession.QuickSitSession
+    val isRunning = quickSit != null
 
     var minutes by remember { mutableStateOf(15) }
-    var secondsRemaining by remember { mutableStateOf(0) }
-    var isRunning by remember { mutableStateOf(false) }
     var selectedBellId by remember { mutableStateOf(BellCatalog.defaultSound.id) }
     var startChimes by remember { mutableStateOf(1) }
     var endChimes by remember { mutableStateOf(1) }
-    var endElapsedRealtime by remember { mutableStateOf(0L) }
+    var nowMillis by remember { mutableStateOf(SessionEngine.now()) }
+    // The session id this screen started or resumed; when it goes away (end bell rang, or Stop in the
+    // notification), the sit is over and the screen closes, like the iOS sheet.
+    var ownSessionId by remember { mutableStateOf(quickSit?.sessionId) }
 
-    val totalSeconds = minutes * 60
+    RequestNotificationPermission()
+
+    LaunchedEffect(session) {
+        val current = session as? TimingSession.QuickSitSession
+        if (current != null) {
+            ownSessionId = current.sessionId
+        } else if (ownSessionId != null) {
+            ownSessionId = null
+            onClose()
+        }
+    }
+
+    LaunchedEffect(isRunning) {
+        while (isRunning) {
+            nowMillis = SessionEngine.now()
+            delay(250L)
+        }
+    }
+
+    val totalSeconds = quickSit?.let { ((it.endMillis - it.startMillis) / 1000L).toInt() } ?: (minutes * 60)
+    val secondsRemaining = quickSit?.let {
+        ceil((it.endMillis - nowMillis).coerceAtLeast(0L) / 1000.0).toInt()
+    } ?: 0
 
     BackHandler(enabled = isRunning) {
-        // Keep behavior aligned with iOS: disable close while a session is running.
+        // Matches iOS: the sheet can't be closed while a sit is running; Cancel ends it.
     }
 
-    fun stopTimer(cancelScheduledAlarm: Boolean) {
-        if (cancelScheduledAlarm) {
-            QuickSitAlarmScheduler.cancel(context)
-        } else {
-            QuickSitAlarmScheduler.clearState(context)
-        }
-        isRunning = false
-        secondsRemaining = 0
-        endElapsedRealtime = 0L
-    }
-
-    fun playBell(chimes: Int) {
-        BellPlayer.play(context, Bell(soundId = selectedBellId, numRings = chimes))
+    fun stopTimer() {
+        // Cancel keeps the screen open (iOS parity); only the sit ending on its own closes it.
+        ownSessionId = null
+        SessionEngine.end(context, SessionEngine.EndReason.QUICK_SIT_CANCELLED)
     }
 
     fun startTimer() {
-        stopTimer(cancelScheduledAlarm = true)
-        val nextEndElapsedRealtime = SystemClock.elapsedRealtime() + (totalSeconds * 1_000L)
-        val scheduled = QuickSitAlarmScheduler.schedule(
+        SessionEngine.startQuickSit(
             context = context,
-            endElapsedRealtime = nextEndElapsedRealtime,
+            durationMillis = minutes * 60_000L,
             soundId = selectedBellId,
-            chimes = endChimes
+            startChimes = startChimes,
+            endChimes = endChimes
         )
-        if (!scheduled) return
-
-        endElapsedRealtime = nextEndElapsedRealtime
-        secondsRemaining = totalSeconds
-        isRunning = true
-        playBell(startChimes)
-    }
-
-    LaunchedEffect(Unit) {
-        val scheduledEnd = QuickSitAlarmScheduler.scheduledEndElapsedRealtime(context)
-        val now = SystemClock.elapsedRealtime()
-        if (scheduledEnd > now) {
-            endElapsedRealtime = scheduledEnd
-            isRunning = true
-            secondsRemaining = ceil((scheduledEnd - now) / 1000.0).toInt().coerceAtLeast(1)
-        } else {
-            QuickSitAlarmScheduler.clearState(context)
-        }
-    }
-
-    LaunchedEffect(isRunning, endElapsedRealtime) {
-        if (!isRunning || endElapsedRealtime <= 0L) return@LaunchedEffect
-
-        while (isRunning) {
-            val now = SystemClock.elapsedRealtime()
-            val remainingMillis = (endElapsedRealtime - now).coerceAtLeast(0L)
-            if (remainingMillis <= 0L) {
-                stopTimer(cancelScheduledAlarm = false)
-                onClose()
-                break
-            }
-            secondsRemaining = ceil(remainingMillis / 1000.0).toInt().coerceAtLeast(1)
-            delay(250L)
-        }
     }
 
     Scaffold(
@@ -147,15 +132,18 @@ fun QuickSitScreen(
             modifier = Modifier
                 .padding(padding)
                 .padding(16.dp)
-                .fillMaxSize(),
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            BellHealthBanner()
+
             DurationSection(
                 minutes = minutes,
                 isRunning = isRunning,
                 onChange = { minutes = it.coerceIn(1, 180) },
                 onStart = {
-                    if (isRunning) stopTimer(cancelScheduledAlarm = true) else startTimer()
+                    if (isRunning) stopTimer() else startTimer()
                 }
             )
 

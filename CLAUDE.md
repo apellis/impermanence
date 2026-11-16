@@ -2,7 +2,9 @@
 
 Meditation and retreat timer with two separate native apps in one repo:
 `ios/Impermanence/` (Swift/SwiftUI, Xcode project) and `android/` (Kotlin/Compose, Gradle).
-Keep features in parity across both. Full setup notes: `docs/DEVELOPMENT.md`.
+Each app should be idiomatic on its platform while giving the same experience and expectations;
+bell timing semantics are identical on both (see `android/CLAUDE.md` and `docs/fixtures/`).
+Full setup notes: `docs/DEVELOPMENT.md`.
 
 ## Commands
 

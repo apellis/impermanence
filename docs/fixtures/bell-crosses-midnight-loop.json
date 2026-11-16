@@ -1,0 +1,109 @@
+{
+  "name": "crosses-midnight-loop",
+  "description": "Looping day 22:00-01:00: keeps running past midnight and rolls to the next run only after 01:00.",
+  "zone": "America/New_York",
+  "loopDays": true,
+  "sessionStart": "2026-06-11T01:00:00Z",
+  "until": "2026-06-12T06:00:00Z",
+  "day": {
+    "id": "23CA5B15-2DD6-5CE5-A46B-A65B472CB96D",
+    "name": "Night sit",
+    "startTimeSeconds": 79200,
+    "segments": [
+      {
+        "id": "840D2C5B-C32E-5F88-8296-1DE35D38091C",
+        "name": "Segment 1",
+        "durationSeconds": 3600
+      },
+      {
+        "id": "718BFF82-A4F6-5256-9F46-8E0C80E99DAC",
+        "name": "Segment 2",
+        "durationSeconds": 3600
+      },
+      {
+        "id": "6EF255D3-47F2-5E19-B3AF-717844505E49",
+        "name": "Segment 3",
+        "durationSeconds": 3600
+      }
+    ],
+    "startBell": {
+      "soundId": 0,
+      "numRings": 1
+    },
+    "manualBell": {
+      "soundId": 0,
+      "numRings": 1
+    },
+    "defaultBell": {
+      "soundId": 0,
+      "numRings": 1
+    },
+    "theme": "teal"
+  },
+  "expectedEvents": [
+    {
+      "instant": "2026-06-11T02:00:00Z",
+      "local": "2026-06-10 22:00:00 EDT",
+      "kind": "start",
+      "segmentIndex": 0,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-11T03:00:00Z",
+      "local": "2026-06-10 23:00:00 EDT",
+      "kind": "end",
+      "segmentIndex": 0,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-11T04:00:00Z",
+      "local": "2026-06-11 00:00:00 EDT",
+      "kind": "end",
+      "segmentIndex": 1,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-11T05:00:00Z",
+      "local": "2026-06-11 01:00:00 EDT",
+      "kind": "end",
+      "segmentIndex": 2,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-12T02:00:00Z",
+      "local": "2026-06-11 22:00:00 EDT",
+      "kind": "start",
+      "segmentIndex": 0,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-12T03:00:00Z",
+      "local": "2026-06-11 23:00:00 EDT",
+      "kind": "end",
+      "segmentIndex": 0,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-12T04:00:00Z",
+      "local": "2026-06-12 00:00:00 EDT",
+      "kind": "end",
+      "segmentIndex": 1,
+      "numRings": 1,
+      "soundId": 0
+    },
+    {
+      "instant": "2026-06-12T05:00:00Z",
+      "local": "2026-06-12 01:00:00 EDT",
+      "kind": "end",
+      "segmentIndex": 2,
+      "numRings": 1,
+      "soundId": 0
+    }
+  ]
+}
