@@ -51,7 +51,8 @@ class SegmentReorderTest {
         assertTrue("Alpha starts above Bravo", top("Alpha") < top("Bravo"))
 
         // Drag Alpha's handle down past Bravo, in small steps so the list lays out between moves.
-        val handle = composeRule.onAllNodesWithTag("segment-drag-handle")[0]
+        // The handle sits inside the clickable row, so its tag is only in the unmerged tree.
+        val handle = composeRule.onAllNodesWithTag("segment-drag-handle", useUnmergedTree = true)[0]
         handle.performTouchInput { down(center) }
         repeat(12) {
             handle.performTouchInput { moveBy(Offset(0f, 16f)) }

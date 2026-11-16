@@ -75,8 +75,11 @@ class ParityUxTest {
         openNewDayScreen()
         composeRule.onAllNodesWithText("Teal").onFirst().performClick()
         composeRule.waitUntil(5_000) { hasNodeWithText("Indigo") }
+        // Let the menu finish opening before choosing, so the tap lands on the item.
+        composeRule.waitForIdle()
         composeRule.onAllNodesWithText("Indigo").onFirst().performClick()
-        composeRule.waitUntil(5_000) { hasNodeWithText("Indigo") && !hasNodeWithText("Periwinkle") }
+        // The menu closes and the field now shows the new theme, which is an unsaved change.
+        composeRule.waitUntil(5_000) { hasNodeWithText("Indigo") && !hasNodeWithText("Periwinkle") && !hasNodeWithText("Teal") }
         composeRule.onNodeWithContentDescription("Cancel").performClick()
         // Leaving with unsaved changes asks first.
         composeRule.waitUntil(15_000) { hasNodeWithText("Discard changes?") }

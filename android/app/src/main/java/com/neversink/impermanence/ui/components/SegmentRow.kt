@@ -73,10 +73,11 @@ fun SegmentRow(
         modifier = modifier
             .fillMaxWidth()
             .reorderOnLongPress(reorderState, segment.id)
-            .semantics { customActions = actions }
     ) {
         Row(
             modifier = Modifier
+                // On the clickable row, which TalkBack focuses as one item.
+                .semantics { customActions = actions }
                 .combinedClickable(
                     onClickLabel = "Edit segment",
                     onLongClickLabel = "Move segment",
