@@ -5,7 +5,9 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.printToString
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.neversink.impermanence.MainActivity
 import org.junit.Assume.assumeTrue
@@ -49,14 +51,23 @@ class StartDayFlowTest {
         val dayName = findSeedDayName()
         assumeTrue("No seeded day found to exercise start-day flow", dayName != null)
 
-        composeRule.waitUntil(5_000) { hasNodeWithText(dayName!!) }
+        waitFor("the day in the list") { hasNodeWithText(dayName!!) }
         composeRule.onNodeWithText(dayName!!).performClick()
-        composeRule.waitUntil(5_000) { hasNodeWithText("Start or Resume Day") }
+        waitFor("the day detail screen") { hasNodeWithText("Start or Resume Day") }
         composeRule.onNodeWithText("Start or Resume Day").performClick()
-        composeRule.waitUntil(5_000) { hasNodeWithContentDescription("Manual bell controls") }
+        waitFor("the active day screen") { hasNodeWithContentDescription("Manual bell controls") }
         composeRule.onNodeWithContentDescription("Manual bell controls").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Manual bell controls").performClick()
         composeRule.onNodeWithText("Ring now").assertIsDisplayed()
+    }
+
+    /** Waits for [condition]; on timeout, fails naming the step and showing what is on screen. */
+    private fun waitFor(step: String, timeoutMillis: Long = 15_000L, condition: () -> Boolean) {
+        val ok = runCatching { composeRule.waitUntil(timeoutMillis, condition) }.isSuccess
+        if (!ok) {
+            val tree = runCatching { composeRule.onRoot().printToString() }.getOrDefault("(no tree)")
+            throw AssertionError("Timed out waiting for $step. Screen:\n$tree")
+        }
     }
 
     private fun findSeedDayName(timeoutMillis: Long = 10_000L): String? {
