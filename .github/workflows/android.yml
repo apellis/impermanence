@@ -99,7 +99,9 @@ jobs:
           script: ./gradlew --no-daemon connectedDebugAndroidTest
       - name: Print failing test details
         if: failure()
-        run: find app/build/outputs/androidTest-results -name '*.xml' -exec grep -l '<failure' {} + | xargs -r cat
+        run: |
+          find app/build/outputs/androidTest-results -name '*.xml' -exec grep -q '<failure' {} \; -exec cat {} \;
+          find app/build/outputs/androidTest-results -name 'logcat-*.txt' -exec grep -h -A20 'FATAL EXCEPTION\|TestRunner: failed' {} \; || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
