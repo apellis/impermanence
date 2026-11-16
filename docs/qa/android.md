@@ -41,11 +41,14 @@ time shown.
   bells still ring on time.
 * **BOFF-3** After the bells, unlock. The notification list holds no bell
   notifications.
-* **BOFF-4-android** Start **Full Day** (or any day with a bell an hour or
-  more away), unplug the phone and leave it still and locked for over an hour,
-  so it enters Doze. The next bell rings on time.
+* **BOFF-4** While a day is being timed, the lock screen shows the day, the
+  current segment and a live countdown to the next bell. It updates when the
+  segment changes and disappears as soon as timing ends.
 * **BOFF-5-android** While a day runs, the only notification is the ongoing
   timer notification, showing the day and the next bell.
+* **BOFF-6-android** Start **Full Day** (or any day with a bell an hour or
+  more away), unplug the phone and leave it still and locked for over an hour,
+  so it enters Doze. The next bell rings on time.
 
 ## Silent, Do Not Disturb and Focus
 
@@ -84,6 +87,8 @@ time shown.
 * **QS-3** Cancel during a sit ends it, and no end bell rings later.
 * **QS-4** A running sit can't be dismissed by accident (swipe down on iOS,
   back on Android).
+* **QS-5** While a Quick Sit runs, the lock screen shows "Quick Sit" and a live
+  "Time remaining" countdown. It disappears when the sit ends or is cancelled.
 
 ## Days and editor
 
@@ -95,7 +100,8 @@ time shown.
   deleted.
 * **EDIT-4** Leaving the editor with changes asks "Discard changes?". "Keep
   Editing" keeps them, and Discard drops them.
-* **EDIT-5** Deleting a day asks "Delete “name”?" first.
+* **EDIT-5** Deleting a day removes it at once and shows "“name” deleted" with
+  Undo for 5 seconds. Undo puts it back in the same place.
 * **EDIT-6** The default bell also sets the start bell and the manual bell.
 * **EDIT-7-android** On Days, each card's menu (⋮) moves the day up or down
   and deletes it. A long day name wraps, and the menu stays visible.
@@ -107,6 +113,8 @@ time shown.
 * **EDIT-10-android** Dragging a segment by its handle (≡) starts at once, with
   no hold, and doesn't scroll the list. Tapping a row opens its editor in a
   bottom sheet; swiping the sheet down keeps the edits.
+* **EDIT-11** Deleting a segment shows "“name” deleted" with Undo for 5
+  seconds. Undo puts it back in the same position.
 
 ## Import and export
 

@@ -23,6 +23,14 @@ class DayRepository(
         }
     }
 
+    /** Puts [day] back at [index] (clamped), for Undo after a delete. Does nothing if it's already there. */
+    suspend fun insertDay(day: Day, index: Int) {
+        dataStore.updateData { current ->
+            if (current.any { it.id == day.id }) current
+            else current.toMutableList().apply { add(index.coerceIn(0, size), day) }
+        }
+    }
+
     suspend fun deleteDay(id: String) {
         dataStore.updateData { current -> current.filterNot { it.id == id } }
     }

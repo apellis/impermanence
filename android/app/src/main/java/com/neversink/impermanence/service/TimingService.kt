@@ -19,6 +19,7 @@ import androidx.core.content.ContextCompat
 import com.neversink.impermanence.MainActivity
 import com.neversink.impermanence.R
 import com.neversink.impermanence.domain.session.TimingSession
+import com.neversink.impermanence.domain.timer.DaySchedule
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -28,6 +29,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import java.util.Date
 
 /**
@@ -187,6 +189,18 @@ class TimingService : Service() {
             context.getSystemService(NotificationManager::class.java)?.createNotificationChannel(channel)
         }
 
+        /** The current segment's name, or null before the day starts or after it ends. */
+        private fun currentSegmentName(session: TimingSession.DaySession, now: Long): String? = runCatching {
+            val zone = SessionEngine.zone()
+            val date = DaySchedule.effectiveDate(session.day, LocalDate.parse(session.anchorDate), now, zone, session.loopDays)
+            val state = DaySchedule.displayState(session.day, DaySchedule.occurrence(session.day, date, zone), now)
+            if (state.status == DaySchedule.Status.ACTIVE) {
+                session.day.segments.getOrNull(state.segmentIndex)?.name?.ifBlank { null }
+            } else {
+                null
+            }
+        }.getOrNull()
+
         fun buildNotification(context: Context, session: TimingSession, nextWakeMillis: Long?): Notification {
             val openApp = PendingIntent.getActivity(
                 context,
@@ -200,18 +214,35 @@ class TimingService : Service() {
                 Intent(context, TimingService::class.java).setAction(ACTION_STOP),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
-            val title = when (session) {
-                is TimingSession.DaySession -> session.day.name
-                is TimingSession.QuickSitSession -> context.getString(R.string.quick_sit_title)
-            }
-            val text = nextWakeMillis?.let {
-                val time = DateFormat.getTimeFormat(context).format(Date(it))
-                when (session) {
-                    is TimingSession.DaySession -> context.getString(R.string.notification_next_bell, time)
-                    is TimingSession.QuickSitSession -> context.getString(R.string.notification_quick_sit_ends, time)
+            val now = SessionEngine.now()
+            // Shown in full on the lock screen: what is being timed, and a live countdown.
+            val title: String
+            val text: String
+            val countdownTo: Long?
+            when (session) {
+                is TimingSession.DaySession -> {
+                    title = session.day.name
+                    val segment = currentSegmentName(session, now)
+                    val nextBell = nextWakeMillis?.let {
+                        context.getString(R.string.notification_next_bell, DateFormat.getTimeFormat(context).format(Date(it)))
+                    } ?: context.getString(R.string.notification_no_more_bells)
+                    text = if (segment.isNullOrBlank()) nextBell else "$segment \u00b7 $nextBell"
+                    countdownTo = nextWakeMillis?.takeIf { it > now }
                 }
-            } ?: context.getString(R.string.notification_no_more_bells)
-            return NotificationCompat.Builder(context, CHANNEL_ID)
+                is TimingSession.QuickSitSession -> {
+                    title = context.getString(R.string.quick_sit_title)
+                    val running = nextWakeMillis != null && session.endMillis > now
+                    text = context.getString(if (running) R.string.time_remaining else R.string.notification_no_more_bells)
+                    countdownTo = session.endMillis.takeIf { running }
+                }
+            }
+            val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+            if (countdownTo != null) {
+                builder.setWhen(countdownTo).setShowWhen(true).setUsesChronometer(true).setChronometerCountDown(true)
+            } else {
+                builder.setShowWhen(false)
+            }
+            return builder
                 .setSmallIcon(R.drawable.ic_notification_small)
                 .setContentTitle(title)
                 .setContentText(text)
@@ -220,7 +251,7 @@ class TimingService : Service() {
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
                 .setSilent(true)
-                .setShowWhen(false)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
                 .build()

@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Impermanence"
 include(":app")
+include(":baselineprofile")
