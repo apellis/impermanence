@@ -19,6 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -32,6 +33,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,6 +41,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.neversink.impermanence.model.BellCatalog
 import com.neversink.impermanence.domain.session.TimingSession
@@ -46,6 +50,7 @@ import com.neversink.impermanence.service.SessionEngine
 import com.neversink.impermanence.ui.components.BellHealthBanner
 import com.neversink.impermanence.ui.components.HeadphonesIndicator
 import com.neversink.impermanence.ui.components.RequestNotificationPermission
+import com.neversink.impermanence.util.LaunchedWhileStarted
 import androidx.compose.runtime.collectAsState
 import kotlinx.coroutines.delay
 import kotlin.math.ceil
@@ -81,17 +86,24 @@ fun QuickSitScreen(
         }
     }
 
-    LaunchedEffect(isRunning) {
-        while (isRunning) {
-            nowMillis = SessionEngine.now()
-            delay(250L)
+    // Refresh once per displayed second, just after it changes, and only while the screen is visible.
+    LaunchedWhileStarted(quickSit?.endMillis) {
+        val end = quickSit?.endMillis ?: return@LaunchedWhileStarted
+        while (true) {
+            val now = SessionEngine.now()
+            nowMillis = now
+            val untilNextSecond = (end - now).mod(1_000L)
+            delay(if (untilNextSecond == 0L) 1_000L else untilNextSecond + 5L)
         }
     }
 
     val totalSeconds = quickSit?.let { ((it.endMillis - it.startMillis) / 1000L).toInt() } ?: (minutes * 60)
-    val secondsRemaining = quickSit?.let {
-        ceil((it.endMillis - nowMillis).coerceAtLeast(0L) / 1000.0).toInt()
-    } ?: 0
+    // Derived, so the screen recomposes only when the shown second changes.
+    val secondsRemaining by remember(quickSit) {
+        derivedStateOf {
+            quickSit?.let { ceil((it.endMillis - nowMillis).coerceAtLeast(0L) / 1000.0).toInt() } ?: 0
+        }
+    }
 
     BackHandler(enabled = isRunning) {
         // Matches iOS: the sheet can't be closed while a sit is running; Cancel ends it.
@@ -176,7 +188,13 @@ private fun DurationSection(
         Text("Duration", style = MaterialTheme.typography.titleMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             listOf(-5, -1, +1, +5).forEach { delta ->
-                OutlinedButton(onClick = { if (!isRunning) onChange(minutes + delta) }, enabled = !isRunning) {
+                OutlinedButton(
+                    onClick = { if (!isRunning) onChange(minutes + delta) },
+                    enabled = !isRunning,
+                    modifier = Modifier.semantics {
+                        contentDescription = if (delta > 0) "Add $delta minutes" else "Subtract ${-delta} minutes"
+                    }
+                ) {
                     Text(if (delta > 0) "+$delta" else "$delta")
                 }
             }
@@ -189,6 +207,7 @@ private fun DurationSection(
                 AssistChip(
                     onClick = { if (!isRunning) onChange(preset) },
                     enabled = !isRunning,
+                    modifier = Modifier.semantics { contentDescription = "Set quick sit to $preset minutes" },
                     label = { Text("${preset} min") },
                     colors = AssistChipDefaults.assistChipColors(
                         containerColor = if (minutes == preset) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
@@ -197,10 +216,19 @@ private fun DurationSection(
                 )
             }
         }
-        OutlinedButton(onClick = onStart) {
-            Icon(imageVector = if (isRunning) Icons.Default.Stop else Icons.Default.PlayArrow, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(if (isRunning) "Cancel" else "Start")
+        // Start is the screen's main action (filled); Cancel is secondary (outlined).
+        if (isRunning) {
+            OutlinedButton(onClick = onStart) {
+                Icon(imageVector = Icons.Default.Stop, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Cancel")
+            }
+        } else {
+            Button(onClick = onStart) {
+                Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Start")
+            }
         }
     }
 }

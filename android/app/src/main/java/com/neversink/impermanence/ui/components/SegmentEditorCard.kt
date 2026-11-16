@@ -11,8 +11,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Remove
@@ -44,15 +42,12 @@ import com.neversink.impermanence.util.TimeFormatting
 @Composable
 fun SegmentEditorCard(
     segment: Day.Segment,
-    position: Int,
     total: Int,
     schedule: Pair<Int, Int>,
     defaultBell: Bell,
     onSegmentChange: (Day.Segment) -> Unit,
     onDelete: () -> Unit,
     onDuplicate: () -> Unit,
-    onMoveUp: () -> Unit,
-    onMoveDown: () -> Unit,
     use24HourClock: Boolean,
     modifier: Modifier = Modifier
 ) {
@@ -75,12 +70,6 @@ fun SegmentEditorCard(
                 horizontalArrangement = Arrangement.End,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                IconButton(onClick = onMoveUp, enabled = position > 0) {
-                    Icon(imageVector = Icons.Default.ArrowUpward, contentDescription = "Move up")
-                }
-                IconButton(onClick = onMoveDown, enabled = position < total - 1) {
-                    Icon(imageVector = Icons.Default.ArrowDownward, contentDescription = "Move down")
-                }
                 IconButton(onClick = onDuplicate) {
                     Icon(imageVector = Icons.Default.ContentCopy, contentDescription = "Duplicate")
                 }
