@@ -168,8 +168,13 @@ final class ImpermanenceUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["1 minutes"].exists)
         app.buttons["Start"].tap()
         allowNotificationsIfAsked()
+        XCTAssertTrue(waitForStatus(app, prefix: "quicksit pending=", timeout: 10) { $0 == 1 })
         // The sheet closes at the end; the engine stops after the end chime.
-        XCTAssertTrue(app.buttons["Quick Sit"].waitForExistence(timeout: 75))
+        // ("Quick Sit" exists behind the sheet the whole time, so wait for
+        // the sheet's Cancel button to go away instead.)
+        let closed = expectation(for: NSPredicate(format: "exists == false"),
+                                 evaluatedWith: app.buttons["Cancel"])
+        wait(for: [closed], timeout: 80)
         XCTAssertTrue(waitForStatus(app, prefix: "idle pending=", timeout: 15) { $0 == 0 })
     }
 
