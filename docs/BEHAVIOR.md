@@ -111,7 +111,7 @@ meaning. Layout and navigation follow each platform's conventions.
 | Editing | Name, start time, theme, default bell (which also sets the start and manual bells), segments (name, minutes, custom or default bell; move, duplicate, delete). New segments: 15 min. A day needs a name and at least one segment. |
 | Settings | 24-hour clock (off), Loop days at midnight (on), Keep screen awake during active day (on), Import/Export Days. |
 | Keep screen awake | While a day is queued or running, if the setting is on. |
-| Import/export | JSON `{ "version": 1, "days": [ ... ] }` with integer seconds (see `docs/fixtures/*.json` `day` for one day). File name `impermanence-days-YYYY-MM-DD.json`. Import also accepts the iOS native array. Unknown themes become teal; bells are clamped to valid values. |
+| Import/export | Import first asks "Replace all days?", because it replaces every day. JSON `{ "version": 1, "days": [ ... ] }` with integer seconds (see `docs/fixtures/*.json` `day` for one day). File name `impermanence-days-YYYY-MM-DD.json`. Import also accepts the iOS native array. Unknown themes become teal; bells are clamped to valid values. |
 | Themes | 16 named colors. Text is black, except white on indigo, magenta, navy, oxblood and purple. |
 | Time display | `h:mm AM` or `HH:mm`; durations `HH:MM:SS`. |
 
