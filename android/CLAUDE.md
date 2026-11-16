@@ -19,9 +19,10 @@ say in the PR why it doesn't apply.
 
 ## Bell semantics (must match iOS)
 
-The shared reference is `scripts/bell_fixtures.py`, which generates `docs/fixtures/bell-*.json`.
-Both apps run every fixture in their unit tests (`SharedBellFixturesTest` here). Change the
-reference and regenerate fixtures first, then both apps.
+The spec is `docs/BEHAVIOR.md` section 1. The shared reference `scripts/bell_fixtures.py`
+generates `docs/fixtures/bell-*.json`, and both apps run every fixture in their unit tests
+(`SharedBellFixturesTest` here). To change a rule, change the spec and the reference, regenerate
+the fixtures, then update both apps. In short:
 
 * A day's start is its wall-clock time on the date. A start inside a DST gap moves forward by the
   gap; an ambiguous start uses the earlier offset. Segments are real elapsed durations.
