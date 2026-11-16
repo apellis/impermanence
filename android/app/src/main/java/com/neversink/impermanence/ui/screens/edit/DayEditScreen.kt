@@ -36,6 +36,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.activity.compose.BackHandler
+import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -80,13 +82,33 @@ fun DayEditScreen(
 
 
     val canSave = editingDay.name.isNotBlank() && editingDay.segments.isNotEmpty()
+    // Leaving with unsaved changes asks first, by the back arrow or the system back gesture.
+    val initialDay = remember(existingDay?.id) { editingDay }
+    val hasChanges = editingDay != initialDay
+    var confirmDiscard by remember { mutableStateOf(false) }
+    fun requestDismiss() {
+        if (hasChanges) confirmDiscard = true else onDismiss()
+    }
+    BackHandler(enabled = hasChanges) { confirmDiscard = true }
+    if (confirmDiscard) {
+        AlertDialog(
+            onDismissRequest = { confirmDiscard = false },
+            title = { Text("Discard changes?") },
+            confirmButton = {
+                TextButton(onClick = { confirmDiscard = false; onDismiss() }) { Text("Discard") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDiscard = false }) { Text("Keep Editing") }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(if (isNew) "New Day" else "Edit Day") },
                 navigationIcon = {
-                    IconButton(onClick = onDismiss) {
+                    IconButton(onClick = { requestDismiss() }) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Cancel")
                     }
                 },

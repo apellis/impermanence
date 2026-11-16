@@ -78,6 +78,10 @@ class ParityUxTest {
         composeRule.onAllNodesWithText("Indigo").onFirst().performClick()
         composeRule.waitUntil(5_000) { hasNodeWithText("Indigo") && !hasNodeWithText("Periwinkle") }
         composeRule.onNodeWithContentDescription("Cancel").performClick()
+        // Leaving with unsaved changes asks first.
+        composeRule.waitUntil(15_000) { hasNodeWithText("Discard changes?") }
+        composeRule.onNodeWithText("Discard").performClick()
+        composeRule.waitUntil(15_000) { !hasNodeWithText("Discard changes?") && (hasNodeWithText("Opening Day") || hasNodeWithText("Full Day")) }
     }
 
     @Test
