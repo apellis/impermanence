@@ -22,29 +22,26 @@ struct DayDetailView: View {
     }
 
     var body: some View {
-        Group {
-            if isPresentingActiveDay {
-                DayActiveView(day: $day)
-                    .navigationBarBackButtonHidden(true)
-                    .toolbar {
-                        ToolbarItem(placement: .navigationBarLeading) {
-                            Button {
-                                withAnimation(.none) {
+        detailList
+            // Timing a day is a focused task: it fills the screen, and End Day
+            // is the way out. Ending is cheap, since starting the same day
+            // again resumes it (bells follow the clock).
+            .fullScreenCover(isPresented: $isPresentingActiveDay) {
+                NavigationStack {
+                    DayActiveView(day: $day)
+                        .navigationTitle(day.name)
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button("End Day") {
+                                    // End first, so this view's onAppear
+                                    // can't reopen the screen it is leaving.
+                                    BellEngine.shared.endSession()
                                     isPresentingActiveDay = false
                                 }
-                            } label: {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "chevron.backward")
-                                    Text("Day")
-                                }
                             }
-                            .accessibilityLabel("Day")
                         }
-                    }
-            } else {
-                detailList
+                }
             }
-        }
         .navigationTitle(day.name)
         .onAppear {
             // A day session resumed at launch reopens its active screen.
