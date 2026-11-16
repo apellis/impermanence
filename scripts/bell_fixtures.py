@@ -61,7 +61,7 @@ def session_events(day: dict, tz: ZoneInfo, session_start: datetime, until: date
         if evs[0]["instant"] > until and (previous_end or evs[0]["instant"]) > until:
             break
         for e in evs:
-            if previous_end is not None and e["instant"] < previous_end:
+            if previous_end is not None and e["instant"] <= previous_end:
                 continue
             if session_start <= e["instant"] <= until:
                 result.append(e)
@@ -169,6 +169,9 @@ CASES = [
          zone="America/New_York", loop=False,
          day=make_day("Bells", (9, 0), [10, 10, 10], start_bell=bell(2), default_bell=bell(1), custom={1: bell(5), 2: bell(12)}),
          start=local("America/New_York", 2026, 6, 10, 8, 0), until=local("America/New_York", 2026, 6, 10, 12, 0)),
+    dict(name="exactly-24h-loop", description="A looping day of exactly 24 h: the next run's start coincides with the last end bell, and only the end bell rings.",
+         zone="America/New_York", loop=True, day=make_day("Round the clock", (6, 0), [720, 720], start_bell=bell(2), default_bell=bell(3)),
+         start=local("America/New_York", 2026, 6, 10, 5, 0), until=local("America/New_York", 2026, 6, 12, 7, 0)),
     dict(name="longer-than-a-day-loop", description="A 25-hour looping day: the next run's bells only ring after the previous run ends.",
          zone="America/New_York", loop=True, day=make_day("Marathon", (6, 0), [600, 600, 300]),
          start=local("America/New_York", 2026, 6, 10, 5, 0), until=local("America/New_York", 2026, 6, 12, 12, 0)),

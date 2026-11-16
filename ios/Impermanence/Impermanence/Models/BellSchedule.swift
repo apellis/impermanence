@@ -201,7 +201,7 @@ enum DaySchedule {
 
     /// Every bell event a day session rings while it runs from `sessionStart`,
     /// restricted to instants in `window`. Nothing before `sessionStart` ever
-    /// rings. With looping, the occurrence on date D+1 only rings events at or
+    /// rings. With looping, the occurrence on date D+1 only rings events strictly
     /// after the end of D's occurrence.
     static func sessionEvents(for day: Day, anchor: CalendarDay, sessionStart: Date, loopDays: Bool,
                               window: ClosedRange<Date>, calendar: Calendar) -> [BellEvent] {
@@ -229,7 +229,7 @@ enum DaySchedule {
                 break
             }
             for event in events(for: occ, of: day) {
-                if let previousEnd, event.instant < previousEnd { continue }
+                if let previousEnd, event.instant <= previousEnd { continue }
                 if event.instant >= lower && event.instant <= window.upperBound {
                     result.append(event)
                 }
