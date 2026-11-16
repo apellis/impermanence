@@ -88,14 +88,15 @@ class ParityUxTest {
     }
 
     @Test
-    fun deletingADayAsksFirst() {
-        composeRule.waitUntil(10_000) { hasNodeWithText("Opening Day") || hasNodeWithText("Full Day") }
-        composeRule.onAllNodesWithContentDescription("More options for", substring = true).onFirst().performClick()
+    fun deletingADayOffersUndo() {
+        composeRule.waitUntil(10_000) { hasNodeWithText("Opening Day") }
+        composeRule.onNodeWithContentDescription("More options for Opening Day").performClick()
         composeRule.waitUntil(15_000) { hasNodeWithText("Delete") }
         composeRule.onNodeWithText("Delete").performClick()
-        composeRule.waitUntil(5_000) { hasNodeWithText("This day and its segments will be removed.") }
-        composeRule.onNodeWithText("Cancel").performClick()
-        assertTrue(hasNodeWithText("Opening Day") || hasNodeWithText("Full Day"))
+        // Deleted at once, with Undo instead of a confirmation.
+        composeRule.waitUntil(15_000) { hasNodeWithText("\u201cOpening Day\u201d deleted") }
+        composeRule.onNodeWithText("Undo").performClick()
+        composeRule.waitUntil(15_000) { hasNodeWithText("Opening Day") && !hasNodeWithText("\u201cOpening Day\u201d deleted") }
     }
 
     @Test

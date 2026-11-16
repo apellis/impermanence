@@ -74,6 +74,12 @@ class AppViewModel(
         }
     }
 
+    fun restoreDay(day: Day, index: Int) {
+        viewModelScope.launch {
+            dayRepository.insertDay(day, index)
+        }
+    }
+
     fun moveDay(fromIndex: Int, toIndex: Int) {
         viewModelScope.launch {
             dayRepository.moveDay(fromIndex, toIndex)

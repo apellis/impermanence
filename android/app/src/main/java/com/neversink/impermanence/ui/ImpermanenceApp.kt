@@ -214,6 +214,7 @@ fun ImpermanenceApp(appContainer: AppContainer) {
                         onAbout = { navController.navigate(Destinations.About) },
                         onAddDay = { navController.navigate(Destinations.DayEdit) },
                         onDeleteDay = appViewModel::deleteDay,
+                        onRestoreDay = appViewModel::restoreDay,
                         onMoveDay = appViewModel::moveDay
                     )
                 }

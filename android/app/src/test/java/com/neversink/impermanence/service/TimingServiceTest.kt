@@ -89,10 +89,15 @@ class TimingServiceTest {
     }
 
     @Test
-    fun `notification text names the next bell or says there are none`() {
+    fun `notification shows a live countdown on the lock screen, or says there are no more bells`() {
         val session = TimingSession.QuickSitSession("s", now, now + 60_000L, Bell(0, 1), now)
         val withNext = TimingService.buildNotification(context, session, now + 60_000L)
-        assertTrue(withNext.extras.getCharSequence(Notification.EXTRA_TEXT).toString().startsWith("Ends at"))
+        assertEquals("Quick Sit", withNext.extras.getCharSequence(Notification.EXTRA_TITLE).toString())
+        assertEquals("Time remaining", withNext.extras.getCharSequence(Notification.EXTRA_TEXT).toString())
+        assertEquals(now + 60_000L, withNext.`when`)
+        assertTrue(withNext.extras.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER))
+        assertTrue(withNext.extras.getBoolean(Notification.EXTRA_CHRONOMETER_COUNT_DOWN))
+        assertEquals(Notification.VISIBILITY_PUBLIC, withNext.visibility)
         val none = TimingService.buildNotification(context, session, null)
         assertEquals("No more bells today", none.extras.getCharSequence(Notification.EXTRA_TEXT).toString())
     }

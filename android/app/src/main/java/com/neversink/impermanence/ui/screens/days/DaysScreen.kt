@@ -13,7 +13,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -21,13 +20,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
@@ -35,6 +33,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.neversink.impermanence.model.Day
 import com.neversink.impermanence.ui.components.DayCard
+import com.neversink.impermanence.ui.components.deletedMessage
+import com.neversink.impermanence.ui.components.showUndo
+import com.neversink.impermanence.ui.components.undoTimeoutMillis
+import kotlinx.coroutines.launch
 import com.neversink.impermanence.ui.viewmodel.AppUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,9 +49,23 @@ fun DaysScreen(
     onAbout: () -> Unit,
     onAddDay: () -> Unit,
     onDeleteDay: (String) -> Unit,
+    onRestoreDay: (Day, Int) -> Unit,
     onMoveDay: (fromIndex: Int, toIndex: Int) -> Unit
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val undoMillis = undoTimeoutMillis()
+    // Deleting is immediate, with Undo for a few seconds instead of a confirmation (as on iOS).
+    fun deleteWithUndo(day: Day, index: Int) {
+        onDeleteDay(day.id)
+        scope.launch {
+            if (snackbarHostState.showUndo(deletedMessage(day.name, fallback = "Day deleted"), undoMillis)) {
+                onRestoreDay(day, index)
+            }
+        }
+    }
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             LargeTopAppBar(
                 title = { Text("Days") },
@@ -86,11 +102,12 @@ fun DaysScreen(
             use24HourClock = uiState.use24HourClock,
             contentPadding = contentPadding,
             onDaySelected = onDaySelected,
-            onDeleteDay = onDeleteDay,
+            onDeleteDay = ::deleteWithUndo,
             onMoveDay = onMoveDay
         )
     }
 }
+
 
 @Composable
 private fun DaysList(
@@ -98,7 +115,7 @@ private fun DaysList(
     use24HourClock: Boolean,
     contentPadding: PaddingValues,
     onDaySelected: (String) -> Unit,
-    onDeleteDay: (String) -> Unit,
+    onDeleteDay: (Day, Int) -> Unit,
     onMoveDay: (fromIndex: Int, toIndex: Int) -> Unit
 ) {
     if (days.isEmpty()) {
@@ -116,24 +133,6 @@ private fun DaysList(
         return
     }
 
-    var pendingDelete by remember { mutableStateOf<Day?>(null) }
-    pendingDelete?.let { day ->
-        AlertDialog(
-            onDismissRequest = { pendingDelete = null },
-            title = { Text("Delete \u201c${day.name}\u201d?") },
-            text = { Text("This day and its segments will be removed.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    pendingDelete = null
-                    onDeleteDay(day.id)
-                }) { Text("Delete") }
-            },
-            dismissButton = {
-                TextButton(onClick = { pendingDelete = null }) { Text("Cancel") }
-            }
-        )
-    }
-
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = contentPadding,
@@ -149,7 +148,7 @@ private fun DaysList(
                 onClick = { onDaySelected(day.id) },
                 onMoveUp = { if (index > 0) onMoveDay(index, index - 1) },
                 onMoveDown = { if (index < days.lastIndex) onMoveDay(index, index + 1) },
-                onDelete = { pendingDelete = day }
+                onDelete = { onDeleteDay(day, index) }
             )
         }
     }

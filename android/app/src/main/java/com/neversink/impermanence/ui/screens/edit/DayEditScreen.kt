@@ -61,6 +61,13 @@ import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalView
 import com.neversink.impermanence.ui.components.SegmentRow
+import com.neversink.impermanence.ui.components.deletedMessage
+import com.neversink.impermanence.ui.components.showUndo
+import com.neversink.impermanence.ui.components.undoTimeoutMillis
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import com.neversink.impermanence.ui.components.rememberReorderState
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -98,6 +105,9 @@ fun DayEditScreen(
     BackHandler(enabled = hasChanges) { confirmDiscard = true }
 
     val view = LocalView.current
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val undoMillis = undoTimeoutMillis()
     val listState = rememberLazyListState()
     // The segment open in the editor sheet, by id so it survives reordering.
     var editingSegmentId by remember { mutableStateOf<String?>(null) }
@@ -155,8 +165,16 @@ fun DayEditScreen(
                     defaultBell = editingDay.defaultBell,
                     onSegmentChange = { updated -> updateSegments { it[sheetIndex] = updated } },
                     onDelete = {
-                        updateSegments { it.removeAt(sheetIndex) }
+                        val removed = sheetSegment
+                        val at = sheetIndex
+                        updateSegments { it.removeAt(at) }
                         editingSegmentId = null
+                        scope.launch {
+                            val message = deletedMessage(removed.name, fallback = "Segment deleted")
+                            if (snackbarHostState.showUndo(message, undoMillis)) {
+                                updateSegments { if (it.none { s -> s.id == removed.id }) it.add(at.coerceIn(0, it.size), removed) }
+                            }
+                        }
                     },
                     onDuplicate = {
                         duplicateSegment(sheetIndex)
@@ -182,6 +200,7 @@ fun DayEditScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(if (isNew) "New Day" else "Edit Day") },
