@@ -4,16 +4,15 @@
 //
 //  Created by Alex Ellis on 8/12/23.
 //
+//  The one day editor, used by both New Day and Edit: day info, then a
+//  compact list of segments. Tapping a segment opens its own editor.
+//
 
 import SwiftUI
 
 struct DayDetailEditView: View {
     @Binding var day: Day
     @AppStorage("use24HourClock") private var use24HourClock = false
-
-    private var segmentScheduleMap: [UUID: (Date, Date)] {
-        Self.segmentSchedules(for: day)
-    }
 
     var body: some View {
         Form {
@@ -23,46 +22,31 @@ struct DayDetailEditView: View {
                 ThemePicker(selection: $day.theme)
                 BellSelectionControl(title: "Default bell", bell: $day.defaultBell)
             }
-            .listSectionSeparator(.hidden)
-            Section(header:
-                VStack(alignment: .leading) {
-                    Text("Segments").fontWeight(.bold)
-                    Text("Timeline style editor with inline controls.")
-                        .font(.caption)
+
+            Section {
+                if day.segments.isEmpty {
+                    Text("No segments yet. Add one to begin.")
+                        .font(.footnote)
                         .foregroundColor(.secondary)
                 }
-            ) {
-                timelineSummaryRow
-                ForEach(day.segments, id: \.id) { segment in
-                    let binding = safeBinding(for: segment.id)
-                    let schedule = segmentScheduleMap[segment.id]
-                    HStack(alignment: .top, spacing: 10) {
-                        timelineRail(
-                            start: schedule?.0 ?? day.startTimeAsDate,
-                            end: schedule?.1 ?? day.startTimeAsDate
-                        )
-                        DaySegmentEditorRow(
-                            segment: binding,
-                            totalSegments: day.segments.count,
-                            startTime: schedule?.0 ?? day.startTimeAsDate,
-                            endTime: schedule?.1 ?? day.startTimeAsDate,
-                            use24HourClock: use24HourClock,
-                            defaultBell: day.defaultBell,
-                            canMoveUp: segment.id != day.segments.first?.id,
-                            canMoveDown: segment.id != day.segments.last?.id,
-                            onMoveUp: { moveSegment(id: segment.id, offset: -1) },
-                            onMoveDown: { moveSegment(id: segment.id, offset: 1) },
-                            onDuplicate: { duplicateSegment(id: segment.id) },
-                            onDelete: { deleteSegment(id: segment.id) }
-                        )
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                let schedules = Self.segmentSchedules(for: day)
+                ForEach(day.segments) { segment in
+                    NavigationLink {
+                        SegmentEditorView(day: $day, segmentID: segment.id)
+                    } label: {
+                        SegmentRow(segment: segment,
+                                   schedule: schedules[segment.id],
+                                   bell: segment.resolvedEndBell(defaultBell: day.defaultBell),
+                                   use24HourClock: use24HourClock)
                     }
-                    .padding(12)
-                    .background(
-                        RoundedRectangle(cornerRadius: UIStyle.cardCorner)
-                            .fill(Color(uiColor: .secondarySystemBackground))
-                    )
-                    .listRowInsets(EdgeInsets(top: 4, leading: UIStyle.screenPadding, bottom: 4, trailing: UIStyle.screenPadding))
+                    .swipeActions(edge: .leading) {
+                        Button {
+                            duplicateSegment(id: segment.id)
+                        } label: {
+                            Label("Duplicate", systemImage: "plus.square.on.square")
+                        }
+                        .tint(.indigo)
+                    }
                 }
                 .onDelete { indices in
                     // A day keeps at least one segment.
@@ -72,320 +56,250 @@ struct DayDetailEditView: View {
                 .onMove { from, to in
                     day.segments.move(fromOffsets: from, toOffset: to)
                 }
+                .deleteDisabled(day.segments.count <= 1)
 
                 Button(action: addSegment) {
                     Label("Add Segment", systemImage: "plus")
-                        .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(day.theme.mainColor)
+            } header: {
+                HStack {
+                    Text("Segments")
+                    Spacer()
+                    if day.segments.count > 1 {
+                        EditButton()
+                            .font(.footnote)
+                            .textCase(nil)
+                    }
+                }
+            } footer: {
+                if let first = Self.segmentSchedules(for: day)[day.segments.first?.id ?? UUID()],
+                   let last = Self.segmentSchedules(for: day)[day.segments.last?.id ?? UUID()] {
+                    Text("\(TimeFormatting.formattedTime(from: first.0, use24HourClock: use24HourClock)) – \(TimeFormatting.formattedTime(from: last.1, use24HourClock: use24HourClock)), \(SegmentDuration.shortText(last.1.timeIntervalSince(first.0)))")
+                }
             }
-            .listSectionSeparator(.hidden)
-            .listRowSeparator(.hidden)
         }
-        .scrollContentBackground(.hidden)
         .onChange(of: day.defaultBell) { newBell in
             day.startBell = newBell
             day.manualBell = newBell
         }
     }
-}
 
-extension DayDetailEditView {
-    static func segmentSchedules(for day: Day) -> [UUID: (Date, Date)] {
-        let schedules = day.segmentStartEndTimes
-        var lookup: [UUID: (Date, Date)] = [:]
-        for (segment, schedule) in zip(day.segments, schedules) {
-            lookup[segment.id] = schedule
+    private func addSegment() {
+        withAnimation {
+            day.segments.append(Day.Segment(name: "", duration: 15 * 60, customEndBell: nil))
         }
-        return lookup
-    }
-
-    @ViewBuilder
-    private var timelineSummaryRow: some View {
-        let start = day.segmentStartEndTimes.first?.0 ?? day.startTimeAsDate
-        let end = day.segmentStartEndTimes.last?.1 ?? day.startTimeAsDate
-        let total = max(0, end.timeIntervalSince(start))
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Schedule Timeline")
-                .font(.headline)
-            Text("\(TimeFormatting.formattedTime(from: start, use24HourClock: use24HourClock)) – \(TimeFormatting.formattedTime(from: end, use24HourClock: use24HourClock))")
-                .font(.subheadline)
-            Text("Total duration: \(SegmentDuration.shortText(total))")
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
-        .padding(.vertical, 4)
-    }
-
-    @ViewBuilder
-    private func timelineRail(start: Date, end: Date) -> some View {
-        VStack(spacing: 6) {
-            Text(TimeFormatting.formattedTime(from: start, use24HourClock: use24HourClock))
-                .font(.caption2)
-                .monospacedDigit()
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-            Spacer()
-                .frame(height: 10)
-            RoundedRectangle(cornerRadius: 1)
-                .fill(Color.secondary.opacity(0.3))
-                .frame(width: UIStyle.timelineRailWidth, height: 62)
-            Text(TimeFormatting.formattedTime(from: end, use24HourClock: use24HourClock))
-                .font(.caption2)
-                .monospacedDigit()
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-        }
-        .frame(width: 78)
     }
 
     private func duplicateSegment(id: UUID) {
         guard let index = day.segments.firstIndex(where: { $0.id == id }) else { return }
         var duplicate = day.segments[index]
         duplicate.id = UUID()
-        day.segments.insert(duplicate, at: index + 1)
-    }
-
-    private func deleteSegment(id: UUID) {
-        guard let index = day.segments.firstIndex(where: { $0.id == id }) else { return }
-        day.segments.remove(at: index)
-    }
-
-    private func moveSegment(id: UUID, offset: Int) {
-        guard let index = day.segments.firstIndex(where: { $0.id == id }) else { return }
-        let target = index + offset
-        guard target >= 0 && target < day.segments.count else { return }
-        withAnimation(.easeInOut(duration: 0.18)) {
-            let segment = day.segments.remove(at: index)
-            day.segments.insert(segment, at: target)
-        }
-    }
-
-    private func addSegment() {
         withAnimation {
-            let segment = Day.Segment(name: "", duration: 15 * 60, customEndBell: nil)
-            day.segments.append(segment)
+            day.segments.insert(duplicate, at: index + 1)
         }
     }
-
-    private func safeBinding(for id: UUID) -> Binding<Day.Segment> {
-        Binding(
-            get: {
-                day.segments.first(where: { $0.id == id }) ?? Day.Segment(name: "", duration: 0, customEndBell: nil)
-            },
-            set: { updated in
-                if let index = day.segments.firstIndex(where: { $0.id == id }) {
-                    day.segments[index] = updated
-                }
-            }
-        )
-    }
-
 }
 
-struct DaySegmentEditorRow: View {
-    @Binding var segment: Day.Segment
-    let totalSegments: Int
-    let startTime: Date
-    let endTime: Date
+extension DayDetailEditView {
+    static func segmentSchedules(for day: Day) -> [UUID: (Date, Date)] {
+        var lookup: [UUID: (Date, Date)] = [:]
+        for (segment, schedule) in zip(day.segments, day.segmentStartEndTimes) {
+            lookup[segment.id] = schedule
+        }
+        return lookup
+    }
+
+    /// Whether a day may be saved: it needs a name and at least one segment
+    /// (docs/BEHAVIOR.md, Editing).
+    static func canSave(_ day: Day) -> Bool {
+        !day.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !day.segments.isEmpty
+    }
+}
+
+/// One line per segment: name, duration, times and bell.
+private struct SegmentRow: View {
+    let segment: Day.Segment
+    let schedule: (Date, Date)?
+    let bell: Bell
     let use24HourClock: Bool
-    let defaultBell: Bell
-    let canMoveUp: Bool
-    let canMoveDown: Bool
-    let onMoveUp: () -> Void
-    let onMoveDown: () -> Void
-    let onDuplicate: () -> Void
-    let onDelete: () -> Void
 
-    private var minutesBinding: Binding<Int> {
-        Binding(
-            get: { SegmentDuration.parts(of: segment.duration).minutes },
-            set: { segment.duration = SegmentDuration.interval(minutes: $0, seconds: SegmentDuration.parts(of: segment.duration).seconds) }
-        )
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack {
+                Text(segment.name.isEmpty ? "Untitled segment" : segment.name)
+                    .font(.body)
+                Spacer()
+                Text(SegmentDuration.shortText(segment.duration))
+                    .monospacedDigit()
+                    .foregroundColor(.secondary)
+            }
+            HStack(spacing: 8) {
+                if let schedule {
+                    Text("\(TimeFormatting.formattedTime(from: schedule.0, use24HourClock: use24HourClock)) – \(TimeFormatting.formattedTime(from: schedule.1, use24HourClock: use24HourClock))")
+                        .monospacedDigit()
+                }
+                Label("\(bell.numRings)", systemImage: "bell")
+                    .labelStyle(.titleAndIcon)
+                    .accessibilityLabel("\(bell.numRings) chimes at the end")
+            }
+            .font(.caption)
+            .foregroundColor(.secondary)
+        }
+        .accessibilityElement(children: .combine)
     }
+}
 
-    private var secondsBinding: Binding<Int> {
-        Binding(
-            get: { SegmentDuration.parts(of: segment.duration).seconds },
-            set: { segment.duration = SegmentDuration.interval(minutes: SegmentDuration.parts(of: segment.duration).minutes, seconds: min(max($0, 0), 59)) }
-        )
-    }
+/// Edits one segment of `day`: name, duration in minutes and seconds, and
+/// its end bell.
+struct SegmentEditorView: View {
+    @Binding var day: Day
+    let segmentID: UUID
+    @Environment(\.dismiss) private var dismiss
+    @AppStorage("use24HourClock") private var use24HourClock = false
 
-    /// A number field over `value`. Emptying the field means 0, so a new
-    /// number can be typed without selecting the old one first.
-    private func numberText(_ value: Binding<Int>, max upper: Int) -> Binding<String> {
+    private var index: Int? { day.segments.firstIndex { $0.id == segmentID } }
+
+    private var segment: Binding<Day.Segment> {
         Binding(
-            get: { String(value.wrappedValue) },
-            set: { newValue in
-                let digits = String(newValue.filter(\.isNumber).prefix(5))
-                value.wrappedValue = min(Int(digits) ?? 0, upper)
+            get: { index.map { day.segments[$0] } ?? Day.Segment(name: "", duration: 60) },
+            set: { updated in
+                if let index { day.segments[index] = updated }
             }
         )
     }
 
-    private var usesDefaultBellBinding: Binding<Bool> {
+    private var minutes: Binding<Int> {
         Binding(
-            get: { segment.customEndBell == nil },
-            set: { newValue in
-                if newValue {
-                    segment.useDefaultBell()
-                } else {
-                    if segment.customEndBell == nil {
-                        segment.setCustomEndBell(defaultBell)
-                    }
+            get: { SegmentDuration.parts(of: segment.wrappedValue.duration).minutes },
+            set: { segment.wrappedValue.duration = SegmentDuration.interval(minutes: $0, seconds: SegmentDuration.parts(of: segment.wrappedValue.duration).seconds) }
+        )
+    }
+
+    private var seconds: Binding<Int> {
+        Binding(
+            get: { SegmentDuration.parts(of: segment.wrappedValue.duration).seconds },
+            set: { segment.wrappedValue.duration = SegmentDuration.interval(minutes: SegmentDuration.parts(of: segment.wrappedValue.duration).minutes, seconds: min(max($0, 0), 59)) }
+        )
+    }
+
+    private var usesDefaultBell: Binding<Bool> {
+        Binding(
+            get: { segment.wrappedValue.customEndBell == nil },
+            set: { useDefault in
+                if useDefault {
+                    segment.wrappedValue.useDefaultBell()
+                } else if segment.wrappedValue.customEndBell == nil {
+                    segment.wrappedValue.setCustomEndBell(day.defaultBell)
                 }
             }
         )
     }
 
-    private var customBellBinding: Binding<Bell> {
+    private var customBell: Binding<Bell> {
         Binding(
-            get: { segment.customEndBell ?? defaultBell },
-            set: { segment.setCustomEndBell($0) }
+            get: { segment.wrappedValue.customEndBell ?? day.defaultBell },
+            set: { segment.wrappedValue.setCustomEndBell($0) }
         )
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 6) {
-                Button(action: onMoveUp) {
-                    Image(systemName: "arrow.up")
+        Form {
+            Section {
+                TextField("Name", text: segment.name)
+                    .textInputAutocapitalization(.words)
+                if let index, let schedule = DayDetailEditView.segmentSchedules(for: day)[segmentID] {
+                    LabeledContent("Time",
+                                   value: "\(TimeFormatting.formattedTime(from: schedule.0, use24HourClock: use24HourClock)) – \(TimeFormatting.formattedTime(from: schedule.1, use24HourClock: use24HourClock))")
+                    LabeledContent("Segment", value: "\(index + 1) of \(day.segments.count)")
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .disabled(!canMoveUp)
-                .accessibilityLabel("Move segment up")
-
-                Button(action: onMoveDown) {
-                    Image(systemName: "arrow.down")
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .disabled(!canMoveDown)
-                .accessibilityLabel("Move segment down")
-
-                Button(action: onDuplicate) {
-                    Image(systemName: "square.on.square")
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .accessibilityLabel("Duplicate segment")
-
-                Button(role: .destructive, action: onDelete) {
-                    Image(systemName: "trash")
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .accessibilityLabel("Delete segment")
-                .disabled(totalSegments <= 1)
             }
 
-            TextField("Name", text: $segment.name)
-                .textFieldStyle(.roundedBorder)
-                .textInputAutocapitalization(.words)
-                .disableAutocorrection(false)
-
-            Text("Time: \(timeRangeText)")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .monospacedDigit()
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Duration")
-                    .font(.subheadline)
+            Section {
                 HStack(spacing: 8) {
-                    TextField("Minutes", text: numberText(minutesBinding, max: SegmentDuration.maxSeconds / 60))
-                        .textFieldStyle(.roundedBorder)
-                        .keyboardType(.numberPad)
-                        .frame(width: 72)
-                        .accessibilityLabel("Minutes")
-                    Text("min")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    TextField("Seconds", text: numberText(secondsBinding, max: 59))
-                        .textFieldStyle(.roundedBorder)
-                        .keyboardType(.numberPad)
-                        .frame(width: 56)
-                        .accessibilityLabel("Seconds")
-                    Text("sec")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Text(SegmentDuration.shortText(segment.duration))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    NumberField(title: "Minutes", value: minutes, upper: SegmentDuration.maxSeconds / 60)
+                    Text("min").foregroundColor(.secondary)
+                    NumberField(title: "Seconds", value: seconds, upper: 59)
+                    Text("sec").foregroundColor(.secondary)
                     Spacer()
                 }
-                durationAdjustRow
+                HStack(spacing: 10) {
+                    adjust("-5 min", by: -5, label: "Subtract five minutes")
+                    adjust("-1", by: -1, label: "Subtract one minute")
+                    adjust("+1", by: 1, label: "Add one minute")
+                    adjust("+5 min", by: 5, label: "Add five minutes")
+                }
+            } header: {
+                Text("Duration")
+            } footer: {
+                Text("1 second to 24 hours. \(SegmentDuration.shortText(segment.wrappedValue.duration)).")
             }
 
-            Toggle("Use day default bell", isOn: usesDefaultBellBinding)
-                .toggleStyle(.switch)
+            Section(header: Text("End bell")) {
+                Toggle("Use day default bell", isOn: usesDefaultBell)
+                if usesDefaultBell.wrappedValue {
+                    Text("\(day.defaultBell.sound.displayName), \(day.defaultBell.numRings) \(day.defaultBell.numRings == 1 ? "chime" : "chimes")")
+                        .foregroundColor(.secondary)
+                } else {
+                    BellSelectionControl(title: "Bell", bell: customBell)
+                }
+            }
 
-            if !usesDefaultBellBinding.wrappedValue {
-                BellSelectionControl(title: "Bell", bell: customBellBinding)
-            } else {
-                Text("Using default bell (\(defaultBell.sound.displayName), \(defaultBell.numRings) chimes)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+            Section {
+                Button("Duplicate Segment") {
+                    guard let index else { return }
+                    var copy = day.segments[index]
+                    copy.id = UUID()
+                    day.segments.insert(copy, at: index + 1)
+                    dismiss()
+                }
+                Button("Delete Segment", role: .destructive) {
+                    guard let index, day.segments.count > 1 else { return }
+                    dismiss()
+                    day.segments.remove(at: index)
+                }
+                .disabled(day.segments.count <= 1)
+            } footer: {
+                if day.segments.count <= 1 {
+                    Text("A day needs at least one segment.")
+                }
             }
         }
-        .padding(.vertical, 4)
+        .navigationTitle(segment.wrappedValue.name.isEmpty ? "Segment" : segment.wrappedValue.name)
+        .navigationBarTitleDisplayMode(.inline)
     }
 
-    private var timeRangeText: String {
-        let start = TimeFormatting.formattedTime(from: startTime, use24HourClock: use24HourClock)
-        let end = TimeFormatting.formattedTime(from: endTime, use24HourClock: use24HourClock)
-        return "\(start) – \(end)"
-    }
-
-
-    private var durationAdjustRow: some View {
-        HStack(spacing: 12) {
-            Button {
-                adjustDuration(byMinutes: -1)
-            } label: {
-                Image(systemName: "minus")
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
-            .accessibilityLabel("Subtract one minute")
-
-            Button {
-                adjustDuration(byMinutes: 1)
-            } label: {
-                Image(systemName: "plus")
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
-            .accessibilityLabel("Add one minute")
-
-            Button {
-                adjustDuration(byMinutes: -5)
-            } label: {
-                Text("-5 min")
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
-            .lineLimit(1)
-            .accessibilityLabel("Subtract five minutes")
-
-            Button {
-                adjustDuration(byMinutes: 5)
-            } label: {
-                Text("+5 min")
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
-            .lineLimit(1)
-            .accessibilityLabel("Add five minutes")
-            Spacer()
+    private func adjust(_ title: String, by delta: Int, label: String) -> some View {
+        Button(title) {
+            let current = SegmentDuration.seconds(of: segment.wrappedValue.duration)
+            segment.wrappedValue.duration = TimeInterval(SegmentDuration.clamped(current + delta * 60))
         }
+        .buttonStyle(.bordered)
+        .controlSize(.small)
+        .lineLimit(1)
+        .accessibilityLabel(label)
     }
+}
 
-    private func adjustDuration(byMinutes delta: Int) {
-        let current = SegmentDuration.seconds(of: segment.duration)
-        segment.duration = TimeInterval(SegmentDuration.clamped(current + delta * 60))
+/// A number-pad field over an Int. Emptying it means 0, so a new number can
+/// be typed without selecting the old one first.
+private struct NumberField: View {
+    let title: String
+    @Binding var value: Int
+    let upper: Int
+
+    var body: some View {
+        TextField(title, text: Binding(
+            get: { String(value) },
+            set: { newValue in
+                let digits = String(newValue.filter(\.isNumber).prefix(5))
+                value = min(Int(digits) ?? 0, upper)
+            }
+        ))
+        .keyboardType(.numberPad)
+        .textFieldStyle(.roundedBorder)
+        .multilineTextAlignment(.trailing)
+        .frame(minWidth: 56, maxWidth: 88)
+        .accessibilityLabel(title)
     }
 }
 
@@ -394,26 +308,29 @@ struct BellSelectionControl: View {
     @Binding var bell: Bell
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        // With a single sound there is nothing to choose.
+        if BellCatalog.sounds.count > 1 {
             Picker(title, selection: $bell.soundId) {
                 ForEach(BellCatalog.sounds) { sound in
                     Text(sound.displayName).tag(sound.id)
                 }
             }
             .pickerStyle(.menu)
-
-            Stepper(value: $bell.numRings, in: 1...12) {
-                Label("Chimes: \(bell.numRings)", systemImage: "bell")
-                    .accessibilityLabel("Number of chimes")
-                    .accessibilityValue("\(bell.numRings)")
-            }
+        } else {
+            LabeledContent(title, value: bell.sound.displayName)
         }
-        .padding(.vertical, 4)
+        Stepper(value: $bell.numRings, in: 1...12) {
+            Label("Chimes: \(bell.numRings)", systemImage: "bell")
+        }
+        .accessibilityLabel("Number of chimes")
+        .accessibilityValue("\(bell.numRings)")
     }
 }
 
 struct DayDetailEditView_Previews: PreviewProvider {
     static var previews: some View {
-        DayDetailEditView(day: .constant(Day.fullDay))
+        NavigationStack {
+            DayDetailEditView(day: .constant(Day.fullDay))
+        }
     }
 }

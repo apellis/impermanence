@@ -65,9 +65,10 @@ final class ImpermanenceUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any).matching(midnight).firstMatch.waitForExistence(timeout: 3),
                       app.debugDescription)
 
-        let dismissButton = app.buttons["Dismiss"]
-        XCTAssertTrue(dismissButton.exists)
-        dismissButton.tap()
+        let cancelButton = app.buttons["Cancel"]
+        XCTAssertTrue(cancelButton.exists)
+        cancelButton.tap()
+        XCTAssertFalse(app.navigationBars["New Day"].waitForExistence(timeout: 1))
     }
 
     func testQuickSitCanOnlyBeCancelledWhileRunning() throws {

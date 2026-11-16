@@ -50,22 +50,11 @@ struct DayDetailView: View {
             }
         }
         .sheet(isPresented: $isPresentingEditView) {
-            NavigationStack {
-                DayDetailEditView(day: $editingDay)
-                    .navigationTitle(day.name)
-                    .toolbar {
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button("Cancel") {
-                                isPresentingEditView = false
-                            }
-                        }
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button("Done") {
-                                isPresentingEditView = false
-                                day = editingDay
-                            }
-                        }
-                    }
+            DayEditorSheet(title: day.name, confirmTitle: "Done", original: editingDay) { edited in
+                day = edited
+                isPresentingEditView = false
+            } onCancel: {
+                isPresentingEditView = false
             }
         }
     }
@@ -132,8 +121,8 @@ struct DayDetailView: View {
         .scrollContentBackground(.hidden)
         .toolbar {
             Button("Edit") {
-                isPresentingEditView = true
                 editingDay = day
+                isPresentingEditView = true
             }
         }
     }

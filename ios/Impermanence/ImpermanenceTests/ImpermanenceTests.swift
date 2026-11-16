@@ -67,6 +67,26 @@ final class ImpermanenceTests: XCTestCase {
         XCTAssertEqual(modes, ["audio"])
     }
 
+    func testDayCanBeSavedOnlyWithANameAndASegment() {
+        var day = Day.emptyDay
+        XCTAssertFalse(DayDetailEditView.canSave(day))
+        day.name = "  "
+        day.segments = [Day.Segment(name: "", duration: 60)]
+        XCTAssertFalse(DayDetailEditView.canSave(day))
+        day.name = "Retreat"
+        XCTAssertTrue(DayDetailEditView.canSave(day))
+        day.segments = []
+        XCTAssertFalse(DayDetailEditView.canSave(day))
+    }
+
+    func testEditorNoticesUnsavedChanges() {
+        let original = Day.openingDay
+        var draft = original
+        XCTAssertFalse(DayEditorSheet.differs(draft, original))
+        draft.segments[0].duration += 1
+        XCTAssertTrue(DayEditorSheet.differs(draft, original))
+    }
+
     func testSegmentSchedulesMatchesSegments() {
         let day = Day.openingDay
         let schedules = DayDetailEditView.segmentSchedules(for: day)

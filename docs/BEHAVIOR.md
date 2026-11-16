@@ -108,7 +108,7 @@ meaning. Layout and navigation follow each platform's conventions.
 | Days list | Shows each day's name and time range in its theme color; reorder and delete. |
 | Day detail | Start time and end time, theme, segments with times and chime counts, "Start or Resume Day", Edit. |
 | Active day | Status (Empty, Day queued, Now, Complete), current segment, time remaining, next bell time, schedule with the current segment highlighted, manual bell ("Ring now", sound, chimes). |
-| Editing | Name, start time, theme, default bell (which also sets the start and manual bells), segments (name, minutes, custom or default bell; move, duplicate, delete). New segments: 15 min. A day needs a name and at least one segment. |
+| Editing | Name, start time, theme, default bell (which also sets the start and manual bells), segments (name, minutes, custom or default bell; move, duplicate, delete). New segments: 15 min. A day needs a name and at least one segment; Add/Done stay disabled until it has both. Leaving the editor with unsaved changes asks "Discard changes?" first. |
 | Settings | 24-hour clock (off), Loop days at midnight (on), Keep screen awake during active day (on), Import/Export Days. |
 | Keep screen awake | While a day is queued or running, if the setting is on. |
 | Import/export | Import first asks "Replace all days?", because it replaces every day. JSON `{ "version": 1, "days": [ ... ] }` with integer seconds (see `docs/fixtures/*.json` `day` for one day). File name `impermanence-days-YYYY-MM-DD.json`. Import also accepts the iOS native array. Unknown themes become teal; bells are clamped to valid values. |
