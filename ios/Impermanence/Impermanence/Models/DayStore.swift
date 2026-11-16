@@ -22,8 +22,17 @@ class DayStore: ObservableObject {
 
     func load() async throws {
         let task = Task<[Day], Error> {
-            if ProcessInfo.processInfo.arguments.contains("--uitesting-reset-days") {
-                return Self.defaultDays
+            let arguments = ProcessInfo.processInfo.arguments
+            if arguments.contains("--uitesting-reset-days") {
+                guard arguments.contains("--uitesting-days-start-soon") else { return Self.defaultDays }
+                // UI tests: start the seed days 5 minutes from now, so their
+                // first bells fall inside the backup notification horizon.
+                let now = Calendar.current.dateComponents([.hour, .minute], from: Date().addingTimeInterval(300))
+                return Self.defaultDays.map { day in
+                    var d = day
+                    d.startTime = TimeInterval((now.hour ?? 0) * 3600 + (now.minute ?? 0) * 60)
+                    return d
+                }
             }
             let fileURL = try Self.fileURL()
             guard let data = try? Data(contentsOf: fileURL) else {

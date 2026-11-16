@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		C1A5E0010000000000000122 /* bell_0_x2.caf in Resources */ = {isa = PBXBuildFile; fileRef = C1A5E0010000000000000121 /* bell_0_x2.caf */; };
+		C1A5E0010000000000000132 /* bell_0_x3.caf in Resources */ = {isa = PBXBuildFile; fileRef = C1A5E0010000000000000131 /* bell_0_x3.caf */; };
+		C1A5E0010000000000000142 /* bell_0_x4.caf in Resources */ = {isa = PBXBuildFile; fileRef = C1A5E0010000000000000141 /* bell_0_x4.caf */; };
+		C1A5E0010000000000000152 /* bell_0_x5.caf in Resources */ = {isa = PBXBuildFile; fileRef = C1A5E0010000000000000151 /* bell_0_x5.caf */; };
+		C1A5E0010000000000000162 /* bell_0_x6.caf in Resources */ = {isa = PBXBuildFile; fileRef = C1A5E0010000000000000161 /* bell_0_x6.caf */; };
 		C1A5E0010000000000000002 /* silence.caf in Resources */ = {isa = PBXBuildFile; fileRef = C1A5E0010000000000000001 /* silence.caf */; };
 		C1A5E0010000000000000004 /* BellSchedule.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A5E0010000000000000003 /* BellSchedule.swift */; };
 		C1A5E0010000000000000006 /* BellScheduleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A5E0010000000000000005 /* BellScheduleTests.swift */; };
@@ -89,6 +94,11 @@
 		FA8992D92A8C9A6300971377 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		FA8992DB2A8D43C000971377 /* BellPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BellPlayer.swift; sourceTree = "<group>"; };
 		FA8992DD2A8D47EF00971377 /* bell_0.caf */ = {isa = PBXFileReference; lastKnownFileType = file; name = bell_0.caf; path = ../Impermanence/Resources/bell_0.caf; sourceTree = "<group>"; };
+		C1A5E0010000000000000121 /* bell_0_x2.caf */ = {isa = PBXFileReference; lastKnownFileType = file; name = bell_0_x2.caf; path = ../Impermanence/Resources/bell_0_x2.caf; sourceTree = "<group>"; };
+		C1A5E0010000000000000131 /* bell_0_x3.caf */ = {isa = PBXFileReference; lastKnownFileType = file; name = bell_0_x3.caf; path = ../Impermanence/Resources/bell_0_x3.caf; sourceTree = "<group>"; };
+		C1A5E0010000000000000141 /* bell_0_x4.caf */ = {isa = PBXFileReference; lastKnownFileType = file; name = bell_0_x4.caf; path = ../Impermanence/Resources/bell_0_x4.caf; sourceTree = "<group>"; };
+		C1A5E0010000000000000151 /* bell_0_x5.caf */ = {isa = PBXFileReference; lastKnownFileType = file; name = bell_0_x5.caf; path = ../Impermanence/Resources/bell_0_x5.caf; sourceTree = "<group>"; };
+		C1A5E0010000000000000161 /* bell_0_x6.caf */ = {isa = PBXFileReference; lastKnownFileType = file; name = bell_0_x6.caf; path = ../Impermanence/Resources/bell_0_x6.caf; sourceTree = "<group>"; };
 		C1A5E0010000000000000001 /* silence.caf */ = {isa = PBXFileReference; lastKnownFileType = file; name = silence.caf; path = ../Impermanence/Resources/silence.caf; sourceTree = "<group>"; };
 		C1A5E0010000000000000003 /* BellSchedule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BellSchedule.swift; sourceTree = "<group>"; };
 		C1A5E0010000000000000005 /* BellScheduleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BellScheduleTests.swift; path = ../../CoreTests/BellScheduleTests.swift; sourceTree = "<group>"; };
@@ -193,6 +203,11 @@
 			children = (
 				FA8992DD2A8D47EF00971377 /* bell_0.caf */,
 				C1A5E0010000000000000001 /* silence.caf */,
+				C1A5E0010000000000000121 /* bell_0_x2.caf */,
+				C1A5E0010000000000000131 /* bell_0_x3.caf */,
+				C1A5E0010000000000000141 /* bell_0_x4.caf */,
+				C1A5E0010000000000000151 /* bell_0_x5.caf */,
+				C1A5E0010000000000000161 /* bell_0_x6.caf */,
 				FA8992992A7EAF5600971377 /* ImpermanenceUITests.swift */,
 				FA89929B2A7EAF5600971377 /* ImpermanenceUITestsLaunchTests.swift */,
 			);
@@ -322,6 +337,11 @@
 				FA8992832A7EAF5600971377 /* Assets.xcassets in Resources */,
 				FA8992DE2A8D47EF00971377 /* bell_0.caf in Resources */,
 				C1A5E0010000000000000002 /* silence.caf in Resources */,
+				C1A5E0010000000000000122 /* bell_0_x2.caf in Resources */,
+				C1A5E0010000000000000132 /* bell_0_x3.caf in Resources */,
+				C1A5E0010000000000000142 /* bell_0_x4.caf in Resources */,
+				C1A5E0010000000000000152 /* bell_0_x5.caf in Resources */,
+				C1A5E0010000000000000162 /* bell_0_x6.caf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

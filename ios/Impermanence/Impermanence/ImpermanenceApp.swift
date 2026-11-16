@@ -7,8 +7,17 @@
 
 import SwiftUI
 import UIKit
+import UserNotifications
 
 final class AppDelegate: NSObject, UIApplicationDelegate {
+    private let notificationPresenter = BellNotificationPresenter()
+
+    func application(_ application: UIApplication,
+                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        UNUserNotificationCenter.current().delegate = notificationPresenter
+        return true
+    }
+
     func applicationWillTerminate(_ application: UIApplication) {
         // Swiping the app away ends any timing session and its bells.
         MainActor.assumeIsolated {

@@ -385,9 +385,15 @@ enum ChimePlanner {
     /// The most recent missed event may still ring if it is at most this late
     /// (the process was suspended or restarted). Older misses never ring.
     static let catchUpLimit: TimeInterval = 60
-    /// Safety-net notifications cover this far ahead, capped by count.
-    static let notificationHorizon: TimeInterval = 24 * 60 * 60
+    /// Backup notifications cover this far ahead, capped by count, and are
+    /// extended on every tick. Kept short so that if the user swipes away an
+    /// app iOS had already suspended (no termination callback), stray
+    /// backups stop within this time.
+    static let notificationHorizon: TimeInterval = 2 * 60 * 60
     static let maxPendingNotifications = 60
+    /// One backup notification plays up to this many chimes of one event
+    /// (a sound file of at most 30 s).
+    static let chimesPerNotification = 6
 
     struct Playback: Equatable {
         let chime: Chime
@@ -448,14 +454,44 @@ enum ChimePlanner {
         return decision
     }
 
-    /// The chimes the notification safety net should hold right now: every
-    /// unhandled chime still in the future, nearest first, capped.
-    static func notificationChimes(chimes: [Chime], handled: Set<String>, sessionStart: Date, now: Date) -> [Chime] {
+    /// One backup notification: up to `chimesPerNotification` consecutive
+    /// chimes of one event, played by one sound file.
+    struct NotificationGroup: Equatable {
+        /// "<event id>.g<k>": chimes k*6 ..< k*6+6 of the event.
+        let id: String
+        let eventID: String
+        let instant: Date
+        let chimeIDs: [String]
+        let soundId: Int
+    }
+
+    static func groupID(of chime: Chime) -> String {
+        "\(chime.eventID).g\(chime.ringIndex / chimesPerNotification)"
+    }
+
+    /// The chime ids a delivered group notification already rang.
+    static func chimeIDs(ofGroup groupID: String) -> [String] {
+        guard let range = groupID.range(of: ".g", options: .backwards),
+              let k = Int(groupID[range.upperBound...]) else { return [] }
+        let eventID = String(groupID[..<range.lowerBound])
+        return (k * chimesPerNotification ..< (k + 1) * chimesPerNotification).map { "\(eventID).\($0)" }
+    }
+
+    /// The backup notifications to hold right now: one per group whose first
+    /// chime is unhandled, still in the future and within the horizon.
+    static func notificationGroups(chimes: [Chime], handled: Set<String>, sessionStart: Date, now: Date) -> [NotificationGroup] {
         let horizon = now.addingTimeInterval(notificationHorizon)
-        return chimes
-            .filter { !handled.contains($0.id) && $0.instant >= sessionStart && $0.instant > now && $0.instant <= horizon }
-            .sorted { $0.instant < $1.instant }
-            .prefix(maxPendingNotifications)
-            .map { $0 }
+        let byGroup = Dictionary(grouping: chimes, by: groupID(of:))
+        var groups: [NotificationGroup] = []
+        for (id, members) in byGroup {
+            let sorted = members.sorted { $0.ringIndex < $1.ringIndex }
+            guard let first = sorted.first,
+                  !handled.contains(first.id), first.instant >= sessionStart,
+                  first.instant > now, first.instant <= horizon else { continue }
+            let open = sorted.filter { !handled.contains($0.id) }
+            groups.append(NotificationGroup(id: id, eventID: first.eventID, instant: first.instant,
+                                            chimeIDs: open.map(\.id), soundId: first.soundId))
+        }
+        return Array(groups.sorted { $0.instant < $1.instant }.prefix(maxPendingNotifications))
     }
 }

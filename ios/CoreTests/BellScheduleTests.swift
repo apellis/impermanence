@@ -338,21 +338,41 @@ final class BellScheduleTests: XCTestCase {
         XCTAssertTrue(d.play.isEmpty)
     }
 
-    func testNotificationSafetyNetCoversFutureUnhandledChimes() {
+    func testBackupNotificationsGroupAnEventsChimes() {
         let t0 = iso.date(from: "2026-06-10T12:00:00Z")!
         let s = quickSit(start: t0, minutes: 20, endChimes: 3)
         let all = chimes(s, around: t0)
-        let net = ChimePlanner.notificationChimes(chimes: all, handled: ["quicksit.start.0"], sessionStart: t0, now: t0.addingTimeInterval(1))
-        XCTAssertEqual(net.map(\.id), ["quicksit.end.0", "quicksit.end.1", "quicksit.end.2"])
+        let net = ChimePlanner.notificationGroups(chimes: all, handled: ["quicksit.start.0"], sessionStart: t0, now: t0.addingTimeInterval(1))
+        XCTAssertEqual(net.map(\.id), ["quicksit.end.g0"])
+        XCTAssertEqual(net.first?.chimeIDs, ["quicksit.end.0", "quicksit.end.1", "quicksit.end.2"])
         XCTAssertEqual(net.first?.instant, t0.addingTimeInterval(1200))
-        let fullDay = Day.fullDay
+        XCTAssertEqual(ChimePlanner.chimeIDs(ofGroup: "2026-06-10.end.3.g1"),
+                       (6..<12).map { "2026-06-10.end.3.\($0)" })
+
+        // A 12-chime bell needs two notifications, the second 18 s later.
+        let twelve = quickSit(start: t0, minutes: 20, endChimes: 12)
+        let groups = ChimePlanner.notificationGroups(chimes: chimes(twelve, around: t0), handled: [], sessionStart: t0, now: t0.addingTimeInterval(1))
+        XCTAssertEqual(groups.map(\.id), ["quicksit.end.g0", "quicksit.end.g1"])
+        XCTAssertEqual(groups[1].instant.timeIntervalSince(groups[0].instant), 18)
+        XCTAssertEqual(groups.map(\.chimeIDs.count), [6, 6])
+
+        // Nothing beyond the horizon, and at most maxPendingNotifications.
         let cal = calendar("UTC")
-        let ds = TimingSession.day(.init(dayID: fullDay.id, openedAt: t0, anchor: CalendarDay(year: 2026, month: 6, day: 11), loopDays: true))
-        let many = DaySchedule.chimes(for: ds.events(day: Day(name: "x", startTime: 0, segments: fullDay.segments, startBell: Bell(soundId: 0, numRings: 3), defaultBell: Bell(soundId: 0, numRings: 3)),
-                                                     window: t0...t0.addingTimeInterval(3 * 86_400), calendar: cal))
-        let capped = ChimePlanner.notificationChimes(chimes: many, handled: [], sessionStart: t0, now: iso.date(from: "2026-06-11T00:00:00Z")!)
+        let minutes = Day(name: "x", startTime: 0, segments: (0..<300).map { _ in Day.Segment(name: "m", duration: 60) },
+                          startBell: Bell(soundId: 0, numRings: 1), defaultBell: Bell(soundId: 0, numRings: 1))
+        let ds = TimingSession.day(.init(dayID: minutes.id, openedAt: t0, anchor: CalendarDay(year: 2026, month: 6, day: 11), loopDays: false))
+        let many = DaySchedule.chimes(for: ds.events(day: minutes, window: t0...t0.addingTimeInterval(2 * 86_400), calendar: cal))
+        let now = iso.date(from: "2026-06-11T00:00:30Z")!
+        let capped = ChimePlanner.notificationGroups(chimes: many, handled: [], sessionStart: t0, now: now)
         XCTAssertEqual(capped.count, ChimePlanner.maxPendingNotifications)
         XCTAssertEqual(capped, capped.sorted { $0.instant < $1.instant })
+        let sparse = Day(name: "y", startTime: 0, segments: (0..<10).map { _ in Day.Segment(name: "h", duration: 3600) },
+                         startBell: Bell(soundId: 0, numRings: 1), defaultBell: Bell(soundId: 0, numRings: 1))
+        let ss = TimingSession.day(.init(dayID: sparse.id, openedAt: t0, anchor: CalendarDay(year: 2026, month: 6, day: 11), loopDays: false))
+        let hourly = ChimePlanner.notificationGroups(chimes: DaySchedule.chimes(for: ss.events(day: sparse, window: t0...t0.addingTimeInterval(2 * 86_400), calendar: cal)),
+                                                     handled: [], sessionStart: t0, now: now)
+        XCTAssertTrue(hourly.allSatisfy { $0.instant <= now.addingTimeInterval(ChimePlanner.notificationHorizon) })
+        XCTAssertEqual(hourly.count, 2)
     }
 
     func testFinished() {

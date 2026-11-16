@@ -215,24 +215,38 @@ struct BellWarningsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             if !engine.notificationsAllowed {
-                warning("Notifications are off. Bells ring while Impermanence is running, but not if iOS closes it.",
-                        systemImage: "bell.slash")
+                warning("Notifications are off. Bells ring while Impermanence is running, but not if iOS stops it.",
+                        systemImage: "bell.slash", openSettings: true)
+            } else if !engine.notificationSoundsOn {
+                warning("Notification sounds are off. Bells ring while Impermanence is running, but not if iOS stops it.",
+                        systemImage: "speaker.slash", openSettings: true)
+            } else if !engine.timeSensitiveOn {
+                warning("Time Sensitive notifications are off, so a Focus could hold back bells if iOS stops Impermanence.",
+                        systemImage: "moon", openSettings: true)
             }
             if engine.outputVolume < 0.1 {
-                warning("Volume is very low. Turn it up to hear the bells.", systemImage: "speaker.slash")
+                warning("Volume is very low. Turn it up to hear the bells.", systemImage: "speaker.wave.1", openSettings: false)
+            }
+            if engine.usingHeadphones {
+                Label("Bells are playing in headphones", systemImage: "headphones")
+                    .font(.footnote.weight(.semibold))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(.thinMaterial, in: Capsule())
+                    .accessibilityIdentifier("headphonesNotice")
             }
         }
     }
 
     @ViewBuilder
-    private func warning(_ text: String, systemImage: String) -> some View {
+    private func warning(_ text: String, systemImage: String, openSettings: Bool) -> some View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: systemImage)
             VStack(alignment: .leading, spacing: 4) {
                 Text(text).font(.footnote)
-                if systemImage == "bell.slash" {
+                if openSettings {
                     Button("Open Settings") {
-                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                        if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
                             UIApplication.shared.open(url)
                         }
                     }

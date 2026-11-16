@@ -185,7 +185,7 @@ final class ImpermanenceUITests: XCTestCase {
     /// like iOS ending it, so the session would resume) is discarded.
     private func launchApp(keepSession: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments += ["--uitesting-reset-days", "--uitesting"]
+        app.launchArguments += ["--uitesting-reset-days", "--uitesting-days-start-soon", "--uitesting"]
         if !keepSession { app.launchArguments.append("--uitesting-reset-session") }
         app.launch()
         return app
