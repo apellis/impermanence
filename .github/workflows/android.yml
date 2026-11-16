@@ -74,7 +74,7 @@ jobs:
           path: |
             ~/.android/avd/*
             ~/.android/adb*
-          key: avd-${{ matrix.api-level }}-google_apis-x86_64
+          key: avd-${{ matrix.api-level }}-google_apis-x86_64-pixel_6
       - name: Create AVD snapshot
         if: steps.avd-cache.outputs.cache-hit != 'true'
         uses: reactivecircus/android-emulator-runner@v2
@@ -82,6 +82,7 @@ jobs:
           api-level: ${{ matrix.api-level }}
           target: google_apis
           arch: x86_64
+          profile: pixel_6
           force-avd-creation: false
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: false
@@ -92,16 +93,24 @@ jobs:
           api-level: ${{ matrix.api-level }}
           target: google_apis
           arch: x86_64
+          profile: pixel_6
           force-avd-creation: false
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           working-directory: android
           script: ./gradlew --no-daemon connectedDebugAndroidTest
+      - name: Print failing test details
+        if: failure()
+        run: |
+          find app/build/outputs/androidTest-results -name '*.xml' -exec grep -q '<failure' {} \; -exec cat {} \;
+          find app/build/outputs/androidTest-results -name 'logcat-*.txt' -exec grep -h -A20 'FATAL EXCEPTION\|TestRunner: failed' {} \; || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: android-instrumented-reports-api${{ matrix.api-level }}
-          path: android/app/build/reports/androidTests/
+          path: |
+            android/app/build/reports/androidTests/
+            android/app/build/outputs/androidTest-results/
 
   cloud-sdk-script:
     # Checks that scripts/setup-android-sdk.sh works from a bare Linux image,

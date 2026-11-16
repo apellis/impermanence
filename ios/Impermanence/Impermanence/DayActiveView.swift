@@ -10,33 +10,19 @@ import UIKit
 
 struct DayActiveView: View {
     @Binding var day: Day
-    @Environment(\.scenePhase) private var scenePhase
-    @StateObject var dayTimer: DayTimer
-    @State private var scheduleRows: [ScheduleRowData]
-    @State private var startTask: Task<Void, Never>?
+    @StateObject private var dayTimer: DayTimer
+    @ObservedObject private var engine = BellEngine.shared
 
     @AppStorage("loopDays") private var loopDaysSetting = true
     @AppStorage("use24HourClock") private var use24HourClock = false
     @AppStorage("keepScreenAwakeDuringActiveDay") private var keepScreenAwakeDuringActiveDay = true
 
-    private let bellPlayer = BellPlayer.shared
-
-    private struct ScheduleRowData: Identifiable, Equatable {
+    private struct ScheduleRowData: Identifiable {
         let id: UUID
         let segment: Day.Segment
         let startTime: Date
         let endTime: Date
         let bell: Bell
-
-        static func == (lhs: ScheduleRowData, rhs: ScheduleRowData) -> Bool {
-            lhs.id == rhs.id &&
-            lhs.segment.name == rhs.segment.name &&
-            lhs.segment.duration == rhs.segment.duration &&
-            lhs.segment.customEndBell == rhs.segment.customEndBell &&
-            lhs.startTime == rhs.startTime &&
-            lhs.endTime == rhs.endTime &&
-            lhs.bell == rhs.bell
-        }
     }
 
     private struct ScheduleListView: View {
@@ -70,23 +56,10 @@ struct DayActiveView: View {
 
     init(day: Binding<Day>) {
         self._day = day
-        self._scheduleRows = State(initialValue: Self.buildScheduleRows(for: day.wrappedValue))
-        let storedLoopSetting: Bool = {
-            if UserDefaults.standard.object(forKey: "loopDays") == nil {
-                return true
-            }
-            return UserDefaults.standard.bool(forKey: "loopDays")
-        }()
-
-        _dayTimer = StateObject(
-            wrappedValue: DayTimer(
-                startTime: day.wrappedValue.startTime,
-                segments: day.wrappedValue.segments,
-                startBell: day.wrappedValue.startBell,
-                defaultBell: day.wrappedValue.defaultBell,
-                loopDays: storedLoopSetting
-            )
-        )
+        let storedLoopSetting = UserDefaults.standard.object(forKey: "loopDays") == nil
+            ? true
+            : UserDefaults.standard.bool(forKey: "loopDays")
+        _dayTimer = StateObject(wrappedValue: DayTimer(day: day.wrappedValue, loopDays: storedLoopSetting))
     }
 
     var body: some View {
@@ -94,9 +67,10 @@ struct DayActiveView: View {
             RoundedRectangle(cornerRadius: 16.0)
                 .fill(day.theme.mainColor)
             VStack(spacing: UIStyle.sectionSpacing) {
+                BellWarningsView(engine: engine)
                 activeSummary
-                if dayTimer.activeSegmentTimeElapsed >= 0 && dayTimer.activeSegmentTimeRemaining >= 0 {
-                    SegmentProgressView(timeElapsed: dayTimer.activeSegmentTimeElapsed, timeRemaining: dayTimer.activeSegmentTimeRemaining, theme: day.theme)
+                if let elapsed = dayTimer.progress.elapsed, let remaining = dayTimer.progress.remaining {
+                    SegmentProgressView(timeElapsed: elapsed.rounded(.down), timeRemaining: remaining.rounded(.down), theme: day.theme)
                 }
                 Divider()
                     .frame(height: 2)
@@ -114,35 +88,23 @@ struct DayActiveView: View {
         .padding(UIStyle.screenPadding)
         .foregroundColor(day.theme.accentColor)
         .onAppear {
-            BellNotificationScheduler.prepareAuthorization()
-            dayTimer.segmentChangedAction = { bell in
-                guard let bell else { return }
-                bellPlayer.play(bell: bell)
-            }
-            scheduleRows = Self.buildScheduleRows(for: day)
+            // Being on this screen is "timing this day": start the bell
+            // session, or rejoin it if it is already running (resumed at launch).
+            let anchor = engine.startOrResumeDay(dayTimer.day, loopDays: loopDaysSetting)
+            dayTimer.attach(anchor: anchor)
             dayTimer.loopDays = loopDaysSetting
-            startTask?.cancel()
-            startTask = Task { @MainActor in
-                try? await Task.sleep(nanoseconds: 250_000_000)
-                guard !Task.isCancelled else { return }
-                dayTimer.startDay()
-                updateIdleTimerBehavior()
-                handleScenePhaseChange(scenePhase)
-            }
+            dayTimer.start()
             updateIdleTimerBehavior()
         }
         .onDisappear {
-            startTask?.cancel()
-            startTask = nil
-            dayTimer.stopDay()
-            BellNotificationScheduler.cancelDayBells()
+            // Leaving this screen ends the session: no more bells.
+            dayTimer.stop()
+            engine.endSession()
             UIApplication.shared.isIdleTimerDisabled = false
         }
         .onChange(of: loopDaysSetting) { newValue in
             dayTimer.loopDays = newValue
-            if scenePhase != .active {
-                scheduleBackgroundBellNotificationsIfNeeded()
-            }
+            engine.setLoopDays(newValue)
         }
         .onChange(of: keepScreenAwakeDuringActiveDay) { _ in
             updateIdleTimerBehavior()
@@ -150,15 +112,12 @@ struct DayActiveView: View {
         .onChange(of: dayTimer.segmentIndex) { _ in
             updateIdleTimerBehavior()
         }
-        .onChange(of: scenePhase) { phase in
-            handleScenePhaseChange(phase)
-        }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
                     Button {
-                        bellPlayer.play(bell: day.manualBell)
+                        engine.ringNow(day.manualBell)
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "play.circle")
@@ -184,10 +143,23 @@ struct DayActiveView: View {
                         }
                     }
                 } label: {
-                    Image(systemName: "bell")
+                    Label("Manual bell controls", systemImage: "bell")
+                        .labelStyle(.iconOnly)
                 }
                 .accessibilityLabel("Manual bell controls")
             }
+        }
+    }
+
+    private var scheduleRows: [ScheduleRowData] {
+        guard let occurrence = dayTimer.progress.occurrence,
+              occurrence.segments.count == dayTimer.day.segments.count else { return [] }
+        return dayTimer.day.segments.enumerated().map { index, segment in
+            ScheduleRowData(id: segment.id,
+                            segment: segment,
+                            startTime: occurrence.segments[index].start,
+                            endTime: occurrence.segments[index].end,
+                            bell: segment.resolvedEndBell(defaultBell: dayTimer.day.defaultBell))
         }
     }
 
@@ -200,12 +172,12 @@ struct DayActiveView: View {
             Text(dayTimer.segmentText)
                 .font(.title3)
                 .fontWeight(.semibold)
-            if dayTimer.activeSegmentTimeRemaining >= 0 {
-                Text("Remaining \(formatDuration(dayTimer.activeSegmentTimeRemaining))")
+            if let remaining = dayTimer.progress.remaining {
+                Text("Remaining \(TimeFormatting.formattedDuration(from: remaining))")
                     .font(.headline)
             }
-            if let nextBellTime {
-                Text("Next bell at \(nextBellTime)")
+            if let next = dayTimer.progress.nextBell {
+                Text("Next bell at \(TimeFormatting.formattedTime(from: next, use24HourClock: use24HourClock))")
                     .font(.subheadline)
             }
         }
@@ -217,75 +189,63 @@ struct DayActiveView: View {
     }
 
     private var statusTitle: String {
-        switch dayTimer.segmentIndex {
-        case -2:
-            return "Empty"
-        case -1:
-            return "Day queued"
-        case 0..<day.segments.count:
-            return "Now"
-        default:
-            return "Complete"
+        switch dayTimer.progress.status {
+        case .empty: return "Empty"
+        case .queued: return "Day queued"
+        case .running: return "Now"
+        case .complete: return "Complete"
         }
-    }
-
-    private var nextBellTime: String? {
-        guard !scheduleRows.isEmpty else { return nil }
-        if dayTimer.segmentIndex < 0 {
-            return TimeFormatting.formattedTime(from: scheduleRows[0].startTime, use24HourClock: use24HourClock)
-        }
-        guard dayTimer.segmentIndex < scheduleRows.count else { return nil }
-        return TimeFormatting.formattedTime(from: scheduleRows[dayTimer.segmentIndex].endTime, use24HourClock: use24HourClock)
     }
 
     private func updateIdleTimerBehavior() {
-        UIApplication.shared.isIdleTimerDisabled = keepScreenAwakeDuringActiveDay && isSessionActive
+        let active: Bool
+        switch dayTimer.progress.status {
+        case .queued, .running: active = true
+        case .empty, .complete: active = false
+        }
+        UIApplication.shared.isIdleTimerDisabled = keepScreenAwakeDuringActiveDay && active
+    }
+}
+
+/// Tells the user when something outside the app could keep bells from
+/// being heard.
+struct BellWarningsView: View {
+    @ObservedObject var engine: BellEngine
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if !engine.notificationsAllowed {
+                warning("Notifications are off. Bells ring while Impermanence is running, but not if iOS closes it.",
+                        systemImage: "bell.slash")
+            }
+            if engine.outputVolume < 0.1 {
+                warning("Volume is very low. Turn it up to hear the bells.", systemImage: "speaker.slash")
+            }
+        }
     }
 
-    private var isSessionActive: Bool {
-        let index = dayTimer.segmentIndex
-        if day.segments.isEmpty {
-            return false
+    @ViewBuilder
+    private func warning(_ text: String, systemImage: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: systemImage)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(text).font(.footnote)
+                if systemImage == "bell.slash" {
+                    Button("Open Settings") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
+                    }
+                    .font(.footnote.weight(.semibold))
+                }
+            }
         }
-        if index == -1 {
-            return true
-        }
-        return index >= 0 && index < day.segments.count
-    }
-
-    private func handleScenePhaseChange(_ phase: ScenePhase) {
-        switch phase {
-        case .active:
-            BellNotificationScheduler.cancelDayBells()
-        case .inactive, .background:
-            scheduleBackgroundBellNotificationsIfNeeded()
-        @unknown default:
-            break
-        }
-    }
-
-    private func scheduleBackgroundBellNotificationsIfNeeded() {
-        guard isSessionActive else {
-            BellNotificationScheduler.cancelDayBells()
-            return
-        }
-        BellNotificationScheduler.scheduleDayBells(day: day, loopDays: loopDaysSetting)
-    }
-
-    private func formatDuration(_ duration: TimeInterval) -> String {
-        TimeFormatting.formattedDuration(from: duration)
-    }
-
-    private static func buildScheduleRows(for day: Day) -> [ScheduleRowData] {
-        let schedules = day.segmentStartEndTimes
-        guard schedules.count == day.segments.count else { return [] }
-        return day.segments.enumerated().map { index, segment in
-            ScheduleRowData(id: segment.id,
-                            segment: segment,
-                            startTime: schedules[index].0,
-                            endTime: schedules[index].1,
-                            bell: segment.resolvedEndBell(defaultBell: day.defaultBell))
-        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.yellow.opacity(0.9))
+        .foregroundColor(.black)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .accessibilityElement(children: .combine)
     }
 }
 

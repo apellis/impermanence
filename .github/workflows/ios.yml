@@ -3,9 +3,9 @@ name: iOS
 on:
   push:
     branches: [master]
-    paths: ["ios/**", "scripts/ios-*.sh", ".github/workflows/ios.yml"]
+    paths: ["ios/**", "docs/fixtures/**", "scripts/ios-*.sh", "scripts/bell_fixtures.py", ".github/workflows/ios.yml"]
   pull_request:
-    paths: ["ios/**", "scripts/ios-*.sh", ".github/workflows/ios.yml"]
+    paths: ["ios/**", "docs/fixtures/**", "scripts/ios-*.sh", "scripts/bell_fixtures.py", ".github/workflows/ios.yml"]
   workflow_dispatch:
 
 concurrency:
@@ -13,6 +13,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  core:
+    name: Bell-timing core on Linux + fixture freshness
+    runs-on: ubuntu-latest
+    container: swift:6.0-noble
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fixtures match their generator
+        run: |
+          apt-get update -qq && apt-get install -y -qq python3 tzdata >/dev/null
+          python3 scripts/bell_fixtures.py
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git diff --exit-code docs/fixtures
+      - name: swift test
+        working-directory: ios
+        run: swift test
+
   test:
     name: Build and test on iOS Simulator
     # The repo is public, so GitHub-hosted macOS runners are free.

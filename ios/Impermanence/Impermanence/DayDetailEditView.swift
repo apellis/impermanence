@@ -66,6 +66,8 @@ struct DayDetailEditView: View {
                     .listRowInsets(EdgeInsets(top: 4, leading: UIStyle.screenPadding, bottom: 4, trailing: UIStyle.screenPadding))
                 }
                 .onDelete { indices in
+                    // A day keeps at least one segment.
+                    guard day.segments.count - indices.count >= 1 else { return }
                     day.segments.remove(atOffsets: indices)
                 }
                 .onMove { from, to in
