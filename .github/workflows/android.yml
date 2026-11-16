@@ -97,11 +97,16 @@ jobs:
           disable-animations: true
           working-directory: android
           script: ./gradlew --no-daemon connectedDebugAndroidTest
+      - name: Print failing test details
+        if: failure()
+        run: find app/build/outputs/androidTest-results -name '*.xml' -exec grep -l '<failure' {} + | xargs -r cat
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: android-instrumented-reports-api${{ matrix.api-level }}
-          path: android/app/build/reports/androidTests/
+          path: |
+            android/app/build/reports/androidTests/
+            android/app/build/outputs/androidTest-results/
 
   cloud-sdk-script:
     # Checks that scripts/setup-android-sdk.sh works from a bare Linux image,
