@@ -28,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import com.neversink.impermanence.util.LaunchedWhileStarted
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -71,7 +72,7 @@ data class BellHealth(
 fun BellHealthBanner(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     var health by remember { mutableStateOf(BellHealth.check(context)) }
-    LaunchedEffect(Unit) {
+    LaunchedWhileStarted {
         while (true) {
             health = BellHealth.check(context)
             delay(2_000L)

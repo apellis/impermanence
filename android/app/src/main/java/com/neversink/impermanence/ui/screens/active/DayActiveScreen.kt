@@ -59,6 +59,7 @@ import com.neversink.impermanence.ui.components.SegmentCard
 import com.neversink.impermanence.ui.theme.AppUiTokens
 import com.neversink.impermanence.ui.viewmodel.DayActiveViewModel
 import com.neversink.impermanence.util.KeepScreenOn
+import com.neversink.impermanence.util.LaunchedWhileStarted
 import com.neversink.impermanence.util.TimeFormatting
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -76,7 +77,11 @@ fun DayActiveScreen(
     val viewModel: DayActiveViewModel = viewModel(
         factory = DayActiveViewModel.provideFactory(application, day, loopDays)
     )
-    val timerState by viewModel.displayState.collectAsState()
+    // Collected only while the screen is visible, so the once-a-second refresh pauses when it isn't.
+    var timerState by remember { mutableStateOf(viewModel.displayState.value) }
+    LaunchedWhileStarted(viewModel) {
+        viewModel.displayState.collect { timerState = it }
+    }
     val endedExternally by viewModel.endedExternally.collectAsState()
     LaunchedEffect(endedExternally) {
         if (endedExternally) onExit()
@@ -195,8 +200,11 @@ fun DayActiveScreen(
         val zone = ZoneId.systemDefault()
         // Times shown are the real instants of the occurrence being timed (DST-correct).
         val occurrenceWindows = timerState.occurrence?.segments
-        val schedule = occurrenceWindows?.map { secondsOfDay(it.startMillis, zone) to secondsOfDay(it.endMillis, zone) }
-            ?: displayDay.segmentSchedule()
+        // Changes only when the occurrence does, not on every second's refresh.
+        val schedule = remember(occurrenceWindows, day.segments, day.startTimeSeconds, zone) {
+            occurrenceWindows?.map { secondsOfDay(it.startMillis, zone) to secondsOfDay(it.endMillis, zone) }
+                ?: displayDay.segmentSchedule()
+        }
         val nextBellText = timerState.nextEvent?.let {
             TimeFormatting.formattedTimeFromSeconds(secondsOfDay(it.atMillis, zone), use24HourClock)
         }

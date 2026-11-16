@@ -12,8 +12,10 @@ import com.neversink.impermanence.service.SessionEngine
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.isActive
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
@@ -27,8 +29,18 @@ class DayActiveViewModel(
     private val day: Day,
     loopDays: Boolean
 ) : AndroidViewModel(application) {
-    private val _displayState = MutableStateFlow(computeState())
-    val displayState: StateFlow<DaySchedule.DisplayState> = _displayState.asStateFlow()
+    /**
+     * What the screen shows, refreshed just after each second while someone collects it. The screen
+     * collects only while visible, so this stops ticking when the screen is off or the app is in the
+     * background. Bells don't depend on it: SessionEngine rings them.
+     */
+    val displayState: StateFlow<DaySchedule.DisplayState> = flow {
+        while (true) {
+            emit(computeState())
+            val now = SessionEngine.now()
+            delay((1_000L - now % 1_000L).coerceIn(50L, 1_000L))
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), computeState())
 
     /** True once the session this screen owns was ended from elsewhere (notification Stop, swipe away). */
     private val _endedExternally = MutableStateFlow(false)
@@ -43,13 +55,6 @@ class DayActiveViewModel(
             SessionEngine.session.collect { session ->
                 val ours = sessionId
                 if (ours != null && session?.sessionId != ours) _endedExternally.value = true
-            }
-        }
-        viewModelScope.launch {
-            while (isActive) {
-                _displayState.value = computeState()
-                val now = SessionEngine.now()
-                delay((1_000L - now % 1_000L).coerceIn(50L, 1_000L))
             }
         }
     }

@@ -32,6 +32,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,6 +47,7 @@ import com.neversink.impermanence.service.SessionEngine
 import com.neversink.impermanence.ui.components.BellHealthBanner
 import com.neversink.impermanence.ui.components.HeadphonesIndicator
 import com.neversink.impermanence.ui.components.RequestNotificationPermission
+import com.neversink.impermanence.util.LaunchedWhileStarted
 import androidx.compose.runtime.collectAsState
 import kotlinx.coroutines.delay
 import kotlin.math.ceil
@@ -81,17 +83,24 @@ fun QuickSitScreen(
         }
     }
 
-    LaunchedEffect(isRunning) {
-        while (isRunning) {
-            nowMillis = SessionEngine.now()
-            delay(250L)
+    // Refresh once per displayed second, just after it changes, and only while the screen is visible.
+    LaunchedWhileStarted(quickSit?.endMillis) {
+        val end = quickSit?.endMillis ?: return@LaunchedWhileStarted
+        while (true) {
+            val now = SessionEngine.now()
+            nowMillis = now
+            val untilNextSecond = (end - now).mod(1_000L)
+            delay(if (untilNextSecond == 0L) 1_000L else untilNextSecond + 5L)
         }
     }
 
     val totalSeconds = quickSit?.let { ((it.endMillis - it.startMillis) / 1000L).toInt() } ?: (minutes * 60)
-    val secondsRemaining = quickSit?.let {
-        ceil((it.endMillis - nowMillis).coerceAtLeast(0L) / 1000.0).toInt()
-    } ?: 0
+    // Derived, so the screen recomposes only when the shown second changes.
+    val secondsRemaining by remember(quickSit) {
+        derivedStateOf {
+            quickSit?.let { ceil((it.endMillis - nowMillis).coerceAtLeast(0L) / 1000.0).toInt() } ?: 0
+        }
+    }
 
     BackHandler(enabled = isRunning) {
         // Matches iOS: the sheet can't be closed while a sit is running; Cancel ends it.

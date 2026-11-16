@@ -81,7 +81,7 @@ fun DayDetailScreen(
                 DayInfo(day = day, use24HourClock = use24HourClock)
             }
 
-            itemsIndexed(day.segments) { index, segment ->
+            itemsIndexed(day.segments, key = { _, segment -> segment.id }) { index, segment ->
                 val schedule = day.segmentSchedule()[index]
                 SegmentCard(
                     segment = segment,
