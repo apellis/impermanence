@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct QuickSitSheet: View {
     @Binding var isPresented: Bool
@@ -223,6 +224,9 @@ struct QuickSitSheet: View {
         refreshRemaining()
         timer?.invalidate()
         let t = Timer(timeInterval: 0.25, repeats: true) { _ in
+            // Nothing to show while the app is in the background; it catches
+            // up from the wall clock when it returns. Bells don't use this.
+            guard UIApplication.shared.applicationState != .background else { return }
             refreshRemaining()
         }
         t.tolerance = 0.05
@@ -235,7 +239,8 @@ struct QuickSitSheet: View {
     private func refreshRemaining() {
         guard let running else { return }
         let remaining = running.endsAt.timeIntervalSinceNow
-        secondsRemaining = max(0, Int(remaining.rounded(.up)))
+        let shown = max(0, Int(remaining.rounded(.up)))
+        if shown != secondsRemaining { secondsRemaining = shown }
         if remaining <= 0 {
             finishSession()
         }
