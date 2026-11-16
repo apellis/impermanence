@@ -99,9 +99,10 @@ it should and never when it shouldn't.
     exempt from battery optimization, because some makers' battery savers
     delay alarms. Reliability wins over battery: a long sit or retreat day may
     use more power, plugged in or not.
-- Bells are **just sounds**. They never post notifications or fill the
-  notification list. The only notification is the one the OS requires for
-  timing to keep running (Android's ongoing timer notification, with Stop).
+- Bells are **just sounds**. They don't fill the notification list.
+  Android's only notification is the ongoing timer notification, with Stop.
+  iOS may use a backup notification, which fires only if iOS has stopped the
+  app and is cleared afterwards (pending Alex's decision).
 - While headphones or a Bluetooth audio device are connected, the timing
   screens show a small headphones icon, so it's clear where bells will sound.
   On iOS bells play only in the headphones; Android's alarm stream also plays
