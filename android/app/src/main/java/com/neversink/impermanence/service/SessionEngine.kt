@@ -42,6 +42,17 @@ object SessionEngine {
     private val _nextWakeMillis = MutableStateFlow<Long?>(null)
     val nextWakeMillis: StateFlow<Long?> = _nextWakeMillis.asStateFlow()
 
+    private val _strikesUntilMillis = MutableStateFlow<Long?>(null)
+    /**
+     * Until when the foreground service must keep the process alive for the strikes of the bell that is
+     * ringing (its last strike plus time to sound), or null when no strike is to come. A Quick Sit's
+     * session ends at its end bell, but its later strikes still need the process.
+     */
+    val strikesUntilMillis: StateFlow<Long?> = _strikesUntilMillis.asStateFlow()
+
+    /** The strikes this process posted to [bellOutput]. After process death it is null again. */
+    @Volatile private var ownStrikes: SessionStore.Strikes? = null
+
     private val _alarmMode = MutableStateFlow<BellAlarmScheduler.Mode?>(null)
     val alarmMode: StateFlow<BellAlarmScheduler.Mode?> = _alarmMode.asStateFlow()
 
@@ -50,7 +61,15 @@ object SessionEngine {
     /** Loads the persisted session into memory. Safe in direct boot. */
     @Synchronized
     fun initialize(context: Context) {
-        _session.value = SessionStore(context).load()
+        val store = SessionStore(context)
+        _session.value = store.load()
+        _strikesUntilMillis.value = store.strikes?.let { it.lastStrikeMillis + STRIKE_SOUND_MILLIS }
+    }
+
+    /** What a new process knows: the in-memory record of posted strikes is lost with the old process. */
+    @VisibleForTesting
+    fun forgetProcessState() {
+        ownStrikes = null
     }
 
     /**
@@ -97,6 +116,7 @@ object SessionEngine {
         _session.value = session
         val startBell = Bell(soundId = soundId, numRings = startChimes).sanitized()
         bellOutput.ring(context, startBell)
+        recordStrikes(store, startBell, nowMillis)
         RingLog(context).add(RingLog.Entry(nowMillis, "quick-sit/start", nowMillis, "rang", Trigger.START.name))
         processLocked(context, store, Trigger.START, allowServiceStart = true)
     }
@@ -129,15 +149,16 @@ object SessionEngine {
     }
 
     private fun processLocked(context: Context, store: SessionStore, trigger: Trigger, allowServiceStart: Boolean) {
+        val nowMillis = now()
+        resumeStrikes(context, store, nowMillis, trigger)
         val session = store.load()
         if (session == null) {
             BellAlarmScheduler.cancel(context)
             _session.value = null
             _nextWakeMillis.value = null
-            serviceController.stop(context)
+            stopServiceUnlessStriking(context, allowServiceStart)
             return
         }
-        val nowMillis = now()
         val result = SessionPlanner.process(session, nowMillis, zone())
         val log = RingLog(context)
         if (result.session == null) store.clear() else store.save(result.session)
@@ -147,6 +168,7 @@ object SessionEngine {
         result.ring?.let { ring ->
             runCatching { bellOutput.ring(context, ring.bell) }
                 .onFailure { Log.e(LOG_TAG, "Bell output failed for ${ring.key}", it) }
+            recordStrikes(store, ring.bell, nowMillis)
             log.add(RingLog.Entry(nowMillis, ring.key, ring.scheduledAtMillis, "rang", trigger.name))
         }
         val next = result.nextWakeMillis
@@ -162,14 +184,62 @@ object SessionEngine {
         _nextWakeMillis.value = next
         _session.value = result.session
         when {
-            result.session == null -> serviceController.stop(context)
+            result.session == null -> stopServiceUnlessStriking(context, allowServiceStart)
             allowServiceStart -> serviceController.ensureRunning(context)
         }
+    }
+
+    /** Stops the service once no session runs, but not while the last bell still has strikes to come. */
+    private fun stopServiceUnlessStriking(context: Context, allowServiceStart: Boolean) {
+        when {
+            _strikesUntilMillis.value == null -> serviceController.stop(context)
+            allowServiceStart -> serviceController.ensureRunning(context)
+        }
+    }
+
+    private fun recordStrikes(store: SessionStore, bell: Bell, nowMillis: Long) {
+        val strikes = SessionStore.Strikes(bell.sanitized(), nowMillis)
+        store.strikes = strikes
+        ownStrikes = strikes
+        _strikesUntilMillis.value = strikes.lastStrikeMillis + STRIKE_SOUND_MILLIS
+    }
+
+    /**
+     * Keeps [strikesUntilMillis] current and, in a new process, finishes a bell whose strikes the old
+     * process had posted: strikes still to come ring at their own instants. A strike whose instant has
+     * passed may already have sounded, so it is never repeated (a bell never rings twice).
+     */
+    private fun resumeStrikes(context: Context, store: SessionStore, nowMillis: Long, trigger: Trigger) {
+        val strikes = store.strikes
+        if (strikes == null) {
+            _strikesUntilMillis.value = null
+            return
+        }
+        val until = strikes.lastStrikeMillis + STRIKE_SOUND_MILLIS
+        // Over, or the clock was set back far enough that the record no longer means anything.
+        if (nowMillis > until || nowMillis < strikes.firstStrikeMillis - SessionPlanner.LATE_GRACE_MILLIS) {
+            store.strikes = null
+            ownStrikes = null
+            _strikesUntilMillis.value = null
+            return
+        }
+        _strikesUntilMillis.value = until
+        if (strikes == ownStrikes) return
+        ownStrikes = strikes
+        val spacing = BellPlayer.CHIME_SPACING_MILLIS
+        val from = (0 until strikes.bell.numRings).firstOrNull { strikes.firstStrikeMillis + it * spacing > nowMillis } ?: return
+        val firstAt = strikes.firstStrikeMillis + from * spacing
+        runCatching { bellOutput.ringRemaining(context, strikes.bell, from, firstAt - nowMillis) }
+            .onFailure { Log.e(LOG_TAG, "Bell output failed resuming strikes", it) }
+        RingLog(context).add(RingLog.Entry(nowMillis, "strikes/from-$from", firstAt, "resumed", trigger.name))
     }
 
     private fun endInternal(context: Context, store: SessionStore, reason: EndReason) {
         val existing = store.load()
         store.clear()
+        store.strikes = null
+        ownStrikes = null
+        _strikesUntilMillis.value = null
         BellAlarmScheduler.cancel(context)
         bellOutput.cancelPending()
         _session.value = null
@@ -179,6 +249,9 @@ object SessionEngine {
         }
         if (reason != EndReason.REPLACED) serviceController.stop(context)
     }
+
+    /** How long after a strike starts it may still be sounding (matches BellPlayer's wake lock bound). */
+    private const val STRIKE_SOUND_MILLIS = 15_000L
 
     /** Lets the engine start and stop the foreground service; replaced in tests. */
     interface ServiceController {

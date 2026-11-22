@@ -99,6 +99,10 @@ it should and never when it shouldn't.
     exempt from battery optimization, because some makers' battery savers
     delay alarms. Reliability wins over battery: a long sit or retreat day may
     use more power, plugged in or not.
+    The service also stays until the last chime of a ringing bell has sounded,
+    even after a Quick Sit has ended. If the process is restarted between
+    chimes, the chimes still to come ring on time; a chime whose time passed
+    while the process was gone is not repeated, since it may have sounded.
 - Bells are **just sounds**. They don't fill the notification list.
   Android's only notification is the ongoing timer notification, with Stop.
   iOS keeps a backup notification for each bell in the next 2 hours. It

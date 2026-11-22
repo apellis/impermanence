@@ -32,6 +32,7 @@ class BellReliabilityDeviceTest {
         override fun ring(context: Context, bell: Bell) {
             synchronized(rings) { rings += System.currentTimeMillis() to bell }
         }
+        override fun ringRemaining(context: Context, bell: Bell, fromStrike: Int, firstDelayMillis: Long) {}
         override fun cancelPending() {}
     }
 

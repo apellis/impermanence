@@ -9,6 +9,7 @@ import com.neversink.impermanence.domain.session.TimingSession
 import com.neversink.impermanence.model.Bell
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -35,6 +36,8 @@ class TimingServiceTest {
         SessionEngine.clock = { now }
         SessionEngine.zone = { ZoneId.of("UTC") }
         SessionStore(context).clear()
+        SessionStore(context).strikes = null
+        SessionEngine.forgetProcessState()
         SessionEngine.initialize(context)
     }
 
@@ -76,6 +79,23 @@ class TimingServiceTest {
         now += 60_000L
         BellAlarmReceiver().onReceive(context, Intent(BellAlarmScheduler.ACTION_BELL_ALARM))
         assertEquals(1, bells.rings.size)
+        controller.destroy()
+    }
+
+    @Test
+    fun `the service stays in front while a finished sit's end strikes sound, then stops`() {
+        SessionEngine.startQuickSit(context, 60_000L, 0, 1, 3)
+        now += 60_000L
+        BellAlarmReceiver().onReceive(context, Intent(BellAlarmScheduler.ACTION_BELL_ALARM))
+        assertNull(SessionEngine.session.value)
+        val controller = Robolectric.buildService(TimingService::class.java, Intent(context, TimingService::class.java))
+        val service = controller.create().startCommand(0, 1).get()
+        assertEquals("Quick Sit", shadowOf(service).lastForegroundNotification?.extras?.getCharSequence(Notification.EXTRA_TITLE).toString())
+        assertFalse(shadowOf(service).isStoppedBySelf)
+        // Once the last strike (+6 s) has had time to sound, a tick lets the service go.
+        now += 30_000L
+        SessionEngine.process(context, SessionEngine.Trigger.SERVICE_TICK, allowServiceStart = false)
+        assertNull(SessionEngine.strikesUntilMillis.value)
         controller.destroy()
     }
 
