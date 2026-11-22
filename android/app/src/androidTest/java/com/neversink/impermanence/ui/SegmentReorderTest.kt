@@ -85,21 +85,14 @@ class SegmentReorderTest {
         composeRule.waitForIdle()
         // System back: the first may only hide the keyboard, the next dismisses the sheet. Espresso's
         // pressBack can't be used, because the sheet is its own window and Espresso waits for focus.
-        // After each press, give the sheet time to animate away before pressing again: a press that
-        // lands after the sheet is gone would go to the editor instead (it asks to discard changes).
-        repeat(4) {
+        repeat(3) {
             if (has("Use day default bell")) {
                 InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
                 composeRule.waitForIdle()
-                waitFor(2_000) { !has("Use day default bell") }
             }
         }
         composeRule.waitUntil(15_000) { has(name) && !has("Use day default bell") }
     }
-
-    /** Like waitUntil, but returns false instead of failing when [condition] stays false. */
-    private fun waitFor(timeoutMillis: Long, condition: () -> Boolean): Boolean =
-        runCatching { composeRule.waitUntil(timeoutMillis) { condition() } }.isSuccess
 
     private fun top(text: String): Float =
         composeRule.onNodeWithText(text).fetchSemanticsNode().boundsInRoot.top
