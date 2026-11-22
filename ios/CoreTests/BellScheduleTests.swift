@@ -375,6 +375,37 @@ final class BellScheduleTests: XCTestCase {
         XCTAssertEqual(hourly.count, 2)
     }
 
+    func testLaterChimesOfABellKeepTheirBackupOnceTheFirstHasRung() {
+        // A one-minute sit ending with three strikes, at +60, +63 and +66 s.
+        let t0 = iso.date(from: "2026-06-10T12:00:00Z")!
+        let s = quickSit(start: t0, minutes: 1, endChimes: 3)
+        let all = chimes(s, around: t0)
+        var handled: Set<String> = ["quicksit.start.0"]
+
+        // At +59.5 s only the first strike is due; the app takes it.
+        let d = ChimePlanner.decide(chimes: all, handled: handled, sessionStart: t0, now: t0.addingTimeInterval(59.5))
+        XCTAssertEqual(d.handled, ["quicksit.end.0"])
+        handled.formUnion(d.handled)
+
+        // The other two still have one backup, from +63 s, that does not replay the first.
+        let tail = ChimePlanner.notificationGroups(chimes: all, handled: handled, sessionStart: t0, now: t0.addingTimeInterval(59.5))
+        XCTAssertEqual(tail.map(\.id), ["quicksit.end.g0"])
+        XCTAssertEqual(tail.first?.chimeIDs, ["quicksit.end.1", "quicksit.end.2"])
+        XCTAssertEqual(tail.first?.instant, t0.addingTimeInterval(63))
+
+        // After the second strike, the last one keeps its own backup at +66 s.
+        handled.insert("quicksit.end.1")
+        let last = ChimePlanner.notificationGroups(chimes: all, handled: handled, sessionStart: t0, now: t0.addingTimeInterval(62))
+        XCTAssertEqual(last.first?.chimeIDs, ["quicksit.end.2"])
+        XCTAssertEqual(last.first?.instant, t0.addingTimeInterval(66))
+
+        // Once the first unhandled strike's instant has passed, no new backup
+        // is made for the rest: the one at that instant may be sounding them.
+        let passed = ChimePlanner.notificationGroups(chimes: all, handled: ["quicksit.start.0", "quicksit.end.0"],
+                                                     sessionStart: t0, now: t0.addingTimeInterval(64))
+        XCTAssertTrue(passed.isEmpty)
+    }
+
     func testFinished() {
         let t0 = iso.date(from: "2026-06-10T12:00:00Z")!
         let s = quickSit(start: t0, minutes: 1, endChimes: 3)

@@ -105,7 +105,9 @@ it should and never when it shouldn't.
   fires only if iOS has stopped the app or holds its audio (for example during
   a phone call, when iOS's own notification sound is the only way a bell can
   sound), plays only its sound when the app is in front, and is cleared from
-  the notification list afterwards.
+  the notification list afterwards. Once the app has rung the first chimes of
+  a bell, the remaining chimes keep a backup, which starts at the next chime
+  and never repeats one already rung.
 - While headphones or a Bluetooth audio device are connected, the timing
   screens show a small headphones icon, so it's clear where bells will sound.
   On iOS bells play only in the headphones; Android's alarm stream also plays

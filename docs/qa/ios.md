@@ -146,6 +146,11 @@ time shown.
   mid-session moves the bells to the speaker.
 * **PWR-4-ios** A phone call during a bell: the bell rings from its backup, or
   right after the call ends. It never rings twice.
+* **PWR-5-ios** A call during a multi-strike bell: a 1-minute Quick Sit with
+  12 end chimes (they span 33 s), locked. After the second or third end strike,
+  call the phone from another phone, answer, and stay on the call for over a
+  minute. The remaining strikes keep sounding on their 3 s beat, from the
+  backup notifications. No strike sounds twice, during or after the call.
 
 ## QA-only settings (Debug builds)
 
