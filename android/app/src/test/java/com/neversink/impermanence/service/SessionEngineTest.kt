@@ -244,6 +244,26 @@ class SessionEngineTest {
     }
 
     @Test
+    fun `the service keeps the process alive until the last end strike of a quick sit`() {
+        now = at(10, 0)
+        SessionEngine.startQuickSit(context, 60_000L, soundId = 0, startChimes = 1, endChimes = 3)
+        val stopsBefore = services.stopCount
+        now = at(10, 1)
+        fireAlarm()
+        assertEquals(Bell(0, 3), bells.rings.last())
+        // Strikes at +0, +3 and +6 s are still to come: stopping the foreground service now would leave
+        // them to a background process that Android may kill at any moment.
+        assertEquals(stopsBefore, services.stopCount)
+        now = at(10, 1, 3)
+        SessionEngine.process(context, SessionEngine.Trigger.SERVICE_TICK, allowServiceStart = false)
+        assertEquals(stopsBefore, services.stopCount)
+        now = at(10, 1, 8)
+        SessionEngine.process(context, SessionEngine.Trigger.SERVICE_TICK, allowServiceStart = false)
+        assertTrue(services.stopCount > stopsBefore)
+        assertEquals(2, bells.rings.size)
+    }
+
+    @Test
     fun `cancelling a quick sit means no end bell`() {
         now = at(10, 0)
         SessionEngine.startQuickSit(context, 60_000L, 0, 1, 1)
