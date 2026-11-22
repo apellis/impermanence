@@ -17,6 +17,12 @@ interface BellOutput {
     /** Rings [bell] now: chime i starts 3 s × i after this call. */
     fun ring(context: Context, bell: Bell)
 
+    /**
+     * Rings only strikes [fromStrike] onward of [bell]: the first of them [firstDelayMillis] after this
+     * call, the rest 3 s apart. Used to finish a bell whose earlier strikes another process started.
+     */
+    fun ringRemaining(context: Context, bell: Bell, fromStrike: Int, firstDelayMillis: Long)
+
     /** Cancels chimes that have not started yet. A chime already sounding plays to its end. */
     fun cancelPending()
 }
@@ -44,13 +50,18 @@ object BellPlayer : BellOutput {
         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
         .build()
 
-    override fun ring(context: Context, bell: Bell) {
+    override fun ring(context: Context, bell: Bell) = ringRemaining(context, bell, fromStrike = 0, firstDelayMillis = 0L)
+
+    override fun ringRemaining(context: Context, bell: Bell, fromStrike: Int, firstDelayMillis: Long) {
         val appContext = context.applicationContext
         val sanitized = bell.sanitized()
-        val rings = sanitized.numRings
-        acquireWakeLock(appContext, (rings - 1) * CHIME_SPACING_MILLIS + MAX_CHIME_AUDIO_MILLIS)
-        val base = SystemClock.uptimeMillis()
-        repeat(rings) { index ->
+        val first = fromStrike.coerceAtLeast(0)
+        val count = sanitized.numRings - first
+        if (count <= 0) return
+        val delay = firstDelayMillis.coerceAtLeast(0L)
+        acquireWakeLock(appContext, delay + (count - 1) * CHIME_SPACING_MILLIS + MAX_CHIME_AUDIO_MILLIS)
+        val base = SystemClock.uptimeMillis() + delay
+        repeat(count) { index ->
             handler.postAtTime({ playSingle(appContext, sanitized) }, pendingToken, base + index * CHIME_SPACING_MILLIS)
         }
     }

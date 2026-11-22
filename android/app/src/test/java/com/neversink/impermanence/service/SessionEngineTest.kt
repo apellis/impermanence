@@ -30,8 +30,13 @@ import java.time.ZonedDateTime
 /** A bell output that records what would have rung. */
 class RecordingBellOutput : BellOutput {
     val rings = mutableListOf<Bell>()
+    /** Calls to [ringRemaining]: the bell, the first strike rung, and the delay before it. */
+    val resumed = mutableListOf<Triple<Bell, Int, Long>>()
     var cancelCount = 0
     override fun ring(context: Context, bell: Bell) { rings += bell }
+    override fun ringRemaining(context: Context, bell: Bell, fromStrike: Int, firstDelayMillis: Long) {
+        resumed += Triple(bell, fromStrike, firstDelayMillis)
+    }
     override fun cancelPending() { cancelCount++ }
 }
 
@@ -82,7 +87,9 @@ class SessionEngineTest {
         SessionEngine.clock = { now }
         SessionEngine.zone = { ny }
         SessionStore(context).clear()
+        SessionStore(context).strikes = null
         RingLog(context).clear()
+        SessionEngine.forgetProcessState()
         SessionEngine.initialize(context)
     }
 
@@ -257,10 +264,69 @@ class SessionEngineTest {
         now = at(10, 1, 3)
         SessionEngine.process(context, SessionEngine.Trigger.SERVICE_TICK, allowServiceStart = false)
         assertEquals(stopsBefore, services.stopCount)
-        now = at(10, 1, 8)
+        // The last strike starts at +6 s; the service is held while it sounds, then stops.
+        now = at(10, 1, 20)
+        SessionEngine.process(context, SessionEngine.Trigger.SERVICE_TICK, allowServiceStart = false)
+        assertEquals(stopsBefore, services.stopCount)
+        now = at(10, 1, 22)
         SessionEngine.process(context, SessionEngine.Trigger.SERVICE_TICK, allowServiceStart = false)
         assertTrue(services.stopCount > stopsBefore)
+        assertNull(SessionEngine.strikesUntilMillis.value)
         assertEquals(2, bells.rings.size)
+        assertTrue("strikes posted by this process are never posted again", bells.resumed.isEmpty())
+    }
+
+    @Test
+    fun `after process death between end strikes the strikes still to come ring once, on their beat`() {
+        now = at(10, 0)
+        SessionEngine.startQuickSit(context, 60_000L, soundId = 0, startChimes = 1, endChimes = 3)
+        now = at(10, 1)
+        fireAlarm()
+        // The process dies 1 s after the first end strike; the sticky service restarts it 0.5 s later.
+        SessionEngine.forgetProcessState()
+        SessionEngine.initialize(context)
+        now = at(10, 1, 1) + 500
+        SessionEngine.process(context, SessionEngine.Trigger.SERVICE_RESTART, allowServiceStart = false)
+        // Strike 0 already sounded and is not repeated; strikes 1 and 2 ring at +3 s and +6 s.
+        assertEquals(listOf(Triple(Bell(0, 3), 1, 1_500L)), bells.resumed)
+        assertNull(SessionEngine.session.value)
+        assertNotNull(SessionEngine.strikesUntilMillis.value)
+        // Later triggers in the new process don't post them again, and the end bell itself never repeats.
+        now = at(10, 1, 4)
+        SessionEngine.process(context, SessionEngine.Trigger.SERVICE_TICK, allowServiceStart = false)
+        fireAlarm()
+        assertEquals(1, bells.resumed.size)
+        assertEquals(2, bells.rings.size)
+    }
+
+    @Test
+    fun `a restart after the strikes are over rings nothing`() {
+        now = at(10, 0)
+        SessionEngine.startQuickSit(context, 60_000L, soundId = 0, startChimes = 1, endChimes = 3)
+        now = at(10, 1)
+        fireAlarm()
+        SessionEngine.forgetProcessState()
+        SessionEngine.initialize(context)
+        now = at(10, 1, 7)
+        SessionEngine.process(context, SessionEngine.Trigger.SERVICE_RESTART, allowServiceStart = false)
+        assertTrue("strike 2 at +6 s may have sounded, so it is not repeated", bells.resumed.isEmpty())
+        assertEquals(2, bells.rings.size)
+    }
+
+    @Test
+    fun `ending timing during the strikes cancels the rest and lets the service stop`() {
+        now = at(10, 0)
+        SessionEngine.startQuickSit(context, 60_000L, soundId = 0, startChimes = 1, endChimes = 3)
+        now = at(10, 1)
+        fireAlarm()
+        val cancels = bells.cancelCount
+        SessionEngine.end(context, SessionEngine.EndReason.TASK_REMOVED)
+        assertTrue(bells.cancelCount > cancels)
+        assertNull(SessionEngine.strikesUntilMillis.value)
+        SessionEngine.forgetProcessState()
+        SessionEngine.initialize(context)
+        SessionEngine.process(context, SessionEngine.Trigger.SERVICE_RESTART, allowServiceStart = false)
+        assertTrue(bells.resumed.isEmpty())
     }
 
     @Test

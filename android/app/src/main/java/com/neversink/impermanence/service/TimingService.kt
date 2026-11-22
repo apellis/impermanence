@@ -58,7 +58,7 @@ class TimingService : Service() {
         }
         if (SessionEngine.session.value == null) SessionEngine.initialize(this)
         val session = SessionEngine.session.value
-        if (session == null) {
+        if (session == null && SessionEngine.strikesUntilMillis.value == null) {
             stopSelfSafely()
             return START_NOT_STICKY
         }
@@ -104,16 +104,21 @@ class TimingService : Service() {
         val context = applicationContext
         tickerJob = scope.launch {
             while (isActive) {
-                val next = SessionEngine.nextWakeMillis.value
-                if (SessionEngine.session.value == null) break
+                val strikesUntil = SessionEngine.strikesUntilMillis.value
+                if (SessionEngine.session.value == null && strikesUntil == null) break
+                // Wake for the next bell, or just after the ringing bell's strikes are over.
+                val next = listOfNotNull(SessionEngine.nextWakeMillis.value, strikesUntil?.plus(1)).minOrNull()
                 val wait = if (next == null) MAX_TICK_MILLIS else (next - SessionEngine.now()).coerceIn(MIN_TICK_MILLIS, MAX_TICK_MILLIS)
                 holdWakeLock(wait + WAKE_LOCK_MARGIN_MILLIS)
                 delay(wait)
                 runCatching {
                     SessionEngine.process(context, SessionEngine.Trigger.SERVICE_TICK, allowServiceStart = false)
                 }.onFailure { Log.e(LOG_TAG, "Tick failed", it) }
-                if (SessionEngine.session.value != null && SessionEngine.nextWakeMillis.value == null) {
-                    // No-loop day is complete: nothing left to ring. The screen still shows the session.
+                if (SessionEngine.session.value != null && SessionEngine.nextWakeMillis.value == null &&
+                    SessionEngine.strikesUntilMillis.value == null
+                ) {
+                    // No-loop day is complete and its last bell has finished: nothing left to ring. The
+                    // screen still shows the session.
                     stopSelfSafely()
                     break
                 }
@@ -124,9 +129,11 @@ class TimingService : Service() {
     private fun observeForNotification() {
         if (notificationJob?.isActive == true) return
         notificationJob = scope.launch {
-            SessionEngine.session.combine(SessionEngine.nextWakeMillis) { session, next -> session to next }
-                .collect { (session, next) ->
-                    if (session == null) {
+            combine(SessionEngine.session, SessionEngine.nextWakeMillis, SessionEngine.strikesUntilMillis) { session, next, strikes ->
+                Triple(session, next, strikes)
+            }
+                .collect { (session, next, strikes) ->
+                    if (session == null && strikes == null) {
                         stopSelfSafely()
                     } else {
                         runCatching {
@@ -201,7 +208,11 @@ class TimingService : Service() {
             }
         }.getOrNull()
 
-        fun buildNotification(context: Context, session: TimingSession, nextWakeMillis: Long?): Notification {
+        /**
+         * [session] is null only while a finished Quick Sit's end strikes are still sounding: the
+         * notification then reads like a completed sit.
+         */
+        fun buildNotification(context: Context, session: TimingSession?, nextWakeMillis: Long?): Notification {
             val openApp = PendingIntent.getActivity(
                 context,
                 0,
@@ -234,6 +245,11 @@ class TimingService : Service() {
                     val running = nextWakeMillis != null && session.endMillis > now
                     text = context.getString(if (running) R.string.time_remaining else R.string.notification_no_more_bells)
                     countdownTo = session.endMillis.takeIf { running }
+                }
+                null -> {
+                    title = context.getString(R.string.quick_sit_title)
+                    text = context.getString(R.string.notification_no_more_bells)
+                    countdownTo = null
                 }
             }
             val builder = NotificationCompat.Builder(context, CHANNEL_ID)
