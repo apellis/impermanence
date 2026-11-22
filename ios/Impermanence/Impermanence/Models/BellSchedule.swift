@@ -477,18 +477,24 @@ enum ChimePlanner {
         return (k * chimesPerNotification ..< (k + 1) * chimesPerNotification).map { "\(eventID).\($0)" }
     }
 
-    /// The backup notifications to hold right now: one per group whose first
-    /// chime is unhandled, still in the future and within the horizon.
+    /// The backup notifications to hold right now: one per group whose
+    /// first unhandled chime is still in the future and within the horizon.
+    /// It starts at that chime and covers the group's remaining chimes, so
+    /// once the app has rung the first strikes of a bell, the later ones keep
+    /// their backup (for example if a call then takes the audio).
+    /// A group whose first unhandled chime has passed gets none: a backup
+    /// for that instant may already be sounding all of the remaining chimes.
     static func notificationGroups(chimes: [Chime], handled: Set<String>, sessionStart: Date, now: Date) -> [NotificationGroup] {
         let horizon = now.addingTimeInterval(notificationHorizon)
         let byGroup = Dictionary(grouping: chimes, by: groupID(of:))
         var groups: [NotificationGroup] = []
         for (id, members) in byGroup {
-            let sorted = members.sorted { $0.ringIndex < $1.ringIndex }
-            guard let first = sorted.first,
-                  !handled.contains(first.id), first.instant >= sessionStart,
+            // Same chimes as `decide` may ring: unhandled, not before the session.
+            let open = members
+                .filter { !handled.contains($0.id) && $0.instant >= sessionStart }
+                .sorted { $0.ringIndex < $1.ringIndex }
+            guard let first = open.first,
                   first.instant > now, first.instant <= horizon else { continue }
-            let open = sorted.filter { !handled.contains($0.id) }
             groups.append(NotificationGroup(id: id, eventID: first.eventID, instant: first.instant,
                                             chimeIDs: open.map(\.id), soundId: first.soundId))
         }

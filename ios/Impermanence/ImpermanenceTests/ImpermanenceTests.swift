@@ -303,6 +303,48 @@ final class BellEngineTests: XCTestCase {
         XCTAssertNil(notifications.pending[endID])
     }
 
+    func testLaterEndStrikesKeepTheirBackupAfterTheFirstRings() async {
+        // Three end strikes at +60, +63 and +66 s.
+        _ = engine.startQuickSit(minutes: 1, soundId: 0, startChimes: 1, endChimes: 3)
+        clock.now += 59.5
+        engine.tick()
+        XCTAssertEqual(audio.plays.count, 2, "the first end strike is handed to the player")
+        XCTAssertEqual(notifications.pending[endID]?.soundFile, "bell_0_x2.caf",
+                       "the other two strikes keep a backup, without the first")
+        XCTAssertEqual(notifications.pending[endID]?.fireIn ?? 0, 3.5, accuracy: 0.01)
+
+        // A call takes the audio just after the first strike and lasts past the catch-up window.
+        clock.now += 1
+        await engine.handleInterruption(began: true)
+        audio.activateSucceeds = false
+        clock.now += 1
+        engine.tick()
+        XCTAssertNotNil(notifications.pending[endID], "the backup stays for iOS to ring")
+
+        // iOS rang the backup at +63 s; when the call ends nothing replays.
+        notifications.delivered = [endID]
+        clock.now += 70
+        audio.activateSucceeds = true
+        await engine.handleInterruption(began: false)
+        engine.tick()
+        XCTAssertEqual(audio.plays.count, 2)
+    }
+
+    func testEachEndStrikeRemovesTheBackupBeforeItPlays() {
+        let start = clock.now
+        _ = engine.startQuickSit(minutes: 1, soundId: 0, startChimes: 1, endChimes: 3)
+        for offset in stride(from: 59.0, through: 66.0, by: 0.25) {
+            clock.now = start.addingTimeInterval(offset)
+            engine.tick()
+            if offset == 62.0 {
+                XCTAssertEqual(notifications.pending[endID]?.soundFile, "bell_0.caf", "only the last strike is left to back up")
+            }
+        }
+        XCTAssertEqual(audio.plays.count, 4, "start plus three end strikes, each once")
+        XCTAssertEqual(audio.plays.dropFirst().map { $0.at.timeIntervalSince(start) }, [60, 63, 66])
+        XCTAssertTrue(notifications.pending.isEmpty, "no backup is left to ring a strike the app played")
+    }
+
     func testDuringAnInterruptionTheBackupRingsInstead() async {
         _ = engine.startQuickSit(minutes: 1, soundId: 0, startChimes: 1, endChimes: 1)
         await engine.handleInterruption(began: true)
